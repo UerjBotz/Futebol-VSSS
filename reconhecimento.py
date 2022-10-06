@@ -52,25 +52,21 @@ while True:# Loop de repetição para ret e frame do vídeo
                 break
             # detecção do num no time
 
-            try:
-                hsvNum = cv2.cvtColor(usada, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
-            except OSError:
-                print("error")
-            else:
-                maskNum = cv2.inRange(hsvNum, lower_teamColor, upper_teamColor) # máscara para detecção de um objeto
-                Num, maskNum = cv2.threshold(maskNum, 254, 255, cv2.THRESH_BINARY)
-                resultNum = cv2.bitwise_and(usada, usada, mask=maskNum)
-                contornosNum, Num =  cv2.findContours(maskNum, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-                numeroNoTime = 0
-                for cntNum in contornosNum:
-                    areaNum = cv2.contourArea(cntNum)
-                    if(areaNum > 750):
-                        cv2.drawContours(usada, [cntNum], -1, (255, 255, 255),0)
-                        xnum, ynum, wnum, hnum = cv2.boundingRect(cntNum)
-                        #cv2.rectangle(roi, (x,y), (x +w, y +h), (0, 255, 0), 3)
-                        cv2.rectangle(usada, (xnum, ynum), (xnum + wnum, ynum + hnum), (0, 0, 255), 3)
-                        numeroNoTime += 1
-                roi = cv2.putText(roi,str(numeroNoTime+1),(x+40,y-15),font,0.8,(255,255,255),2,cv2.LINE_AA)
+            hsvNum = cv2.cvtColor(usada, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
+            maskNum = cv2.inRange(hsvNum, lower_teamColor, upper_teamColor) # máscara para detecção de um objeto
+            Num, maskNum = cv2.threshold(maskNum, 254, 255, cv2.THRESH_BINARY)
+            resultNum = cv2.bitwise_and(usada, usada, mask=maskNum)
+            contornosNum, Num =  cv2.findContours(maskNum, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            numeroNoTime = 0
+            for cntNum in contornosNum:
+                areaNum = cv2.contourArea(cntNum)
+                if(areaNum > 750):
+                    cv2.drawContours(usada, [cntNum], -1, (255, 255, 255),0)
+                    xnum, ynum, wnum, hnum = cv2.boundingRect(cntNum)
+                    #cv2.rectangle(roi, (x,y), (x +w, y +h), (0, 255, 0), 3)
+                    cv2.rectangle(usada, (xnum, ynum), (xnum + wnum, ynum + hnum), (0, 0, 255), 3)
+                    numeroNoTime += 1
+            roi = cv2.putText(roi,str(numeroNoTime+1),(x+40,y-15),font,0.8,(255,255,255),2,cv2.LINE_AA)
                     
 
     'print(deteccoes)'
