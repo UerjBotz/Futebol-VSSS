@@ -16,6 +16,8 @@ lower_yellow = np.array([10, 50,50])# array da cor mais clara time amarelo (alte
 upper_yellow = np.array([46, 255, 255])# array da cor mais escura time amarelo (alterar para a cor utilizada no robo físico)
 lower_teamColor = np.array([164, 50,50])# array da cor mais clara do membro do time
 upper_teamColor = np.array([174, 255, 255])# array da cor mais escura do membro do time
+lower_ball = np.array([0, 100,100])
+upper_ball = np.array([10,255,255])
 
 #thresholds:
 distancia = 500 # em milimetros
@@ -25,13 +27,13 @@ areaRobo = areaAzul*(7412/1200) #multiplica a azul pela proporção entre os ret
 tamanhoAumentar = int((areaRobo**(1/2))/2)
 tolerancia = 50/100
 
-print(tamanhoAumentar)
+#print(tamanhoAumentar)
 if time == 0:
-    lower_color = lower_blue
-    upper_color = upper_blue
+    lower_color = lower_blue ; lower_enemy = lower_yellow
+    upper_color = upper_blue ; upper_enemy = upper_yellow
 else:
-    lower_color = lower_yellow
-    upper_color = upper_yellow
+    lower_color = lower_yellow ; lower_enemy = lower_blue
+    upper_color = upper_yellow ; upper_enemy = upper_blue
 
 while True:# Loop de repetição para ret e frame do vídeo
     ret, frame = cap.read() # alterar "roi" para "frame" e utilizar a linha de baixo caso necessário diminuir a resolução da imagem
@@ -46,6 +48,13 @@ while True:# Loop de repetição para ret e frame do vídeo
     _, mask = cv2.threshold(mask, 254, 255, cv2.THRESH_BINARY)
     result = cv2.bitwise_and(roi, roi, mask=mask)
     contornos, _ =  cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    maskBall = cv2.inRange(hsv,lower_ball,upper_ball)
+    maskEnemy = cv2.inRange(hsv,lower_enemy,upper_enemy)
+    testando, maskBall = cv2.threshold(maskBall, 254, 255, cv2.THRESH_BINARY)
+    testando2, maskEnemy = cv2.threshold(maskEnemy, 254, 255, cv2.THRESH_BINARY)
+    contornoBall, testando =  cv2.findContours(maskBall, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contornosEnemy, testando2 =  cv2.findContours(maskEnemy, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
     for cnt in contornos:
         #Cálculo da área e remoção de elementos pequenos
         area = cv2.contourArea(cnt)
@@ -80,7 +89,32 @@ while True:# Loop de repetição para ret e frame do vídeo
                     cv2.rectangle(usada, (xnum, ynum), (xnum + wnum, ynum + hnum), (0, 0, 255), 3)
                     numeroNoTime += 1
             roi = cv2.putText(roi,str(numeroNoTime+1),(x+40,y-15),font,0.8,(255,255,255),2,cv2.LINE_AA)
-                    
+
+    for cnt in contornoBall:
+        #Cálculo da área e remoção de elementos pequenos
+        area = cv2.contourArea(cnt)
+
+        if area > 100:
+
+            cv2.drawContours(roi, [cnt], -1, (0, 255, 0),0)
+            x, y, w, h = cv2.boundingRect(cnt)
+            #cv2.rectangle(roi, (x,y), (x +w, y +h), (0, 255, 0), 3)
+            cv2.rectangle(roi, (x, y), (x + w, y + h), (0, 255, 0), 0)
+            np.append(deteccoes,[x,y,w,h])
+            roi = cv2.putText(roi,str("ball"),(x+40,y-15),font,0.8,(255,255,0),2,cv2.LINE_AA)
+    
+    for cnt in contornosEnemy:
+        #Cálculo da área e remoção de elementos pequenos
+        area = cv2.contourArea(cnt)
+        
+        if area > 100:
+
+            cv2.drawContours(roi, [cnt], -1, (0, 255, 0),0)
+            x, y, w, h = cv2.boundingRect(cnt)
+            #cv2.rectangle(roi, (x,y), (x +w, y +h), (0, 255, 0), 3)
+            cv2.rectangle(roi, (x, y), (x + w, y + h), (0, 0, 255), 0)
+            np.append(deteccoes,[x,y,w,h])
+            roi = cv2.putText(roi,str("enemy"),(x+40,y-15),font,0.8,(0,0,255),2,cv2.LINE_AA)
 
     'print(deteccoes)'
     cv2.imshow("Mask", mask)#Exibe a máscara("Mask") do vídeo
