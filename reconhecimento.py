@@ -1,26 +1,38 @@
 import cv2
 import numpy as np
-import math
 
 time = 0 # 0 para time azul, 1 para time amarelo
-cap = cv2.VideoCapture(1) # Camera
+cap = cv2.VideoCapture(1) # Camera (alterar numero caso camera esteja em outro valor)
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 width = int(cap.get(3))
 height = int(cap.get(4))
 # print(width,height)
+blank = np.zeros((400,400))
+#direction = 0
 
 deteccoes = np.array([])
-lower_blue = np.array([100, 50,50])# array da cor mais clara time azul (alterar para a cor utilizada no robo físico)
-upper_blue = np.array([150, 255, 255])# array da cor mais escura time azul (alterar para a cor utilizada no robo físico)
+lower_blue = np.array([100, 80,80])# array da cor mais clara time azul (alterar para a cor utilizada no robo físico)
+upper_blue = np.array([110, 255, 255])# array da cor mais escura time azul (alterar para a cor utilizada no robo físico)
 lower_yellow = np.array([26, 50,50])# array da cor mais clara time amarelo (alterar para a cor utilizada no robo físico)
 upper_yellow = np.array([46, 255, 255])# array da cor mais escura time amarelo (alterar para a cor utilizada no robo físico)
-lower_teamColor = np.array([164, 50,50])# array da cor mais clara do membro do time
-upper_teamColor = np.array([174, 255, 255])# array da cor mais escura do membro do time
+lower_teamColor = np.array([110, 50,50])# array da cor mais clara do membro do time
+upper_teamColor = np.array([180, 255, 255])# array da cor mais escura do membro do time
 lower_ball = np.array([0, 50,50])
 upper_ball = np.array([16,255,255])
 lower_green = np.array([80,50,50])
 upper_green = np.array([90,255,255])
+
+# menu interativo
+def nothing(x):
+    pass
+
+cv2.namedWindow("blank") # alterar primeiro valor que aparece para atualizar valores encontrados nas mascaras
+cv2.createTrackbar("lowerBlue","blank",102,120,nothing) ; cv2.createTrackbar("upperBlue","blank",110,120,nothing)
+cv2.createTrackbar("lowerYellow","blank",24,40,nothing) ; cv2.createTrackbar("upperYellow","blank",34,40,nothing)
+cv2.createTrackbar("lowerBall","blank",10,30,nothing) ; cv2.createTrackbar("upperBall","blank",20,30,nothing)
+cv2.createTrackbar("lowerTeam","blank",10,180,nothing) ; cv2.createTrackbar("upperTeam","blank",18,180,nothing)
+cv2.createTrackbar("lowerGreen","blank",80,100,nothing) ; cv2.createTrackbar("upperGreen","blank",90,100,nothing) 
 
 #thresholds:
 distancia = 200 # em milimetros
@@ -46,10 +58,15 @@ else:
 while True:# Loop de repetição para ret e frame do vídeo
     ret, frame = cap.read() # alterar "roi" para "frame" e utilizar a linha de baixo caso necessário diminuir a resolução da imagem
     roi = cv2.resize(frame,(0,0),fx=1,fy=1)
-
     # Extrair a região de interesse:
     '''roi =  frame[x:x+?,y:y+?] # neste caso foi utilizada toda a imagem, mas pode ser alterado'''
     
+    lower_blue[0] = cv2.getTrackbarPos('lowerBlue', 'blank') ; upper_blue[0] = cv2.getTrackbarPos('upperBlue', 'blank')
+    lower_yellow[0] = cv2.getTrackbarPos('lowerYellow', 'blank') ; upper_yellow[0] = cv2.getTrackbarPos('upperYellow', 'blank')
+    lower_ball[0] = cv2.getTrackbarPos('lowerBall', 'blank') ; upper_ball[0] = cv2.getTrackbarPos('upperBall', 'blank')
+    lower_teamColor[0] = cv2.getTrackbarPos('lowerTeam', 'blank') ; upper_teamColor[0] = cv2.getTrackbarPos('upperTeam', 'blank')
+    lower_green[0] = cv2.getTrackbarPos('lowerGreen', 'blank') ; upper_green[0] = cv2.getTrackbarPos('upperGreen', 'blank')
+
     #1 Detecção dos membros da equipe:
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
     mask = cv2.inRange(hsv, lower_color, upper_color) # máscara para detecção de um objeto
@@ -101,7 +118,7 @@ while True:# Loop de repetição para ret e frame do vídeo
                 break'''
 
             # detecção do num no time
-            #cv2.imshow("usada",hsv)#Exibe a filmagem("ROI") do vídeo
+            cv2.imshow("usada",hsvNum)#Exibe a filmagem("ROI") do vídeo
             #hsvNum = cv2.cvtColor(usada, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
             maskNum = cv2.inRange(hsvNum, lower_teamColor, upper_teamColor) # máscara para detecção de um objeto
             Num, maskNum = cv2.threshold(maskNum, 254, 255, cv2.THRESH_BINARY)
@@ -112,12 +129,14 @@ while True:# Loop de repetição para ret e frame do vídeo
             contornoDir, testando3 =  cv2.findContours(maskDir, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             for cntNum in contornosNum:
                 areaNum = cv2.contourArea(cntNum)
-                if(areaRosa*(1-tolerancia) <= areaNum <= areaRosa*(1+tolerancia)):
+                #if(areaRosa*(1-tolerancia) <= areaNum <= areaRosa*(1+tolerancia)):
+                if(areaNum > 1):
                     cv2.drawContours(roi, [cntNum], -1, (255, 255, 255),0)
                     xnum, ynum, wnum, hnum = cv2.boundingRect(cntNum)
                     #cv2.rectangle(roi, (x,y), (x +w, y +h), (0, 255, 0), 3)
                     cv2.rectangle(roi, (xnum, ynum), (xnum + wnum, ynum + hnum), (0, 0, 255), 3)
                     numeroNoTime += 1
+                    
             for cnt in contornoDir:
                 #Cálculo da área e remoção de elementos pequenos
                 area = cv2.contourArea(cnt)
@@ -129,12 +148,54 @@ while True:# Loop de repetição para ret e frame do vídeo
                     cv2.rectangle(roi, (xDir, yDir), (xDir + wDir, yDir + hDir), (0, 0, 0), 0)
                     np.append(deteccoes,[xDir,yDir,wDir,hDir])
                     roi = cv2.putText(roi,str("Dir"),(xDir+40,yDir-15),font,0.8,(255,0,255),2,cv2.LINE_AA)
-                    direcao1x  = [(x+w//2),(y+h//2)] ; direcao1y = [(bola[0]+bola[2]//2),(bola[1]+bola[3]//2)]
+                    #direcao1x  = [(x+w//2),(y+h//2)] ; direcao1y = [(bola[0]+bola[2]//2),(bola[1]+bola[3]//2)]
                     #roi = cv2.arrowedLine(roi,direcao1x,direcao1y,[255,255,255],5)
-                    if y > yDir:
-                        print("left")
-                    elif y < yDir:
-                        print("right")
+
+                    if y < (yDir - 5*y//100) and  x <= xDir <= x + w:
+                        #print("left")
+                        #print(bola[0])
+                        if 0 < bola[0] <= x:
+                            print("frente")
+                        elif 0 < (x + w) <= bola[0]:
+                            print("dar ré")
+                        elif 0 < bola[1] <= y:
+                            print("virar direita")
+                        elif 0 < (y+h) <= bola[1]:
+                            print("virar esquerda")
+
+                    elif y > (yDir - 5*y//100) and (x - (20*w//100)) <= xDir <= (x + (20*w//100)):
+                        #print("right")
+                        if 0 < bola[0] <= x:
+                            print("dar ré")
+                        elif 0 < (x+w) <= bola[0]:
+                            print("frente")
+                        elif 0 < bola[1] <= y:
+                            print("virar esquerda")
+                        elif 0 < (y+h) <= bola[1]:
+                            print("virar direita")
+                        
+                    elif x > (xDir -5*y//100) and y <= yDir <= y + h:
+                        #print("up")
+                        if 0 < bola[1] <= y:
+                            print("frente")
+                        elif 0 < (y+h) <= bola[1]:
+                            print("dar ré")
+                        elif 0 < bola[0] <= x:
+                            print("virar esquerda")
+                        elif 0 < (x+w) <= bola[0]:
+                            print("virar direita")
+
+                    elif x < (xDir -5*y//100) and (y - (20*h//100)) <= yDir <= (y + (20*h//100)):
+                        #print("down")
+                        if 0 < bola[1] <= y:
+                            print("dar ré")
+                        elif 0 < y <= bola[1]:
+                            print("frente")
+                        elif 0 < bola[0] <= x:
+                            print("virar esquerda")
+                        elif 0 < (x+w) <= bola[0]:
+                            print("virar direita")
+
                 
             roi = cv2.putText(roi,str(numeroNoTime+1),(x+40,y-15),font,0.8,(255,255,255),2,cv2.LINE_AA)
 
@@ -152,6 +213,7 @@ while True:# Loop de repetição para ret e frame do vídeo
             roi = cv2.putText(roi,str("enemy"),(x+40,y-15),font,0.8,(0,0,255),2,cv2.LINE_AA)
 
     'print(deteccoes)'
+    cv2.imshow("blank",blank)
     cv2.imshow("Mask", mask)#Exibe a máscara("Mask") do vídeo
     cv2.imshow("ROI",roi)#Exibe a filmagem("ROI") do vídeo
     #cv2.imshow("usada",usada)#Exibe a filmagem("ROI") do vídeo
