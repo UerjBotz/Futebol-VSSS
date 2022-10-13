@@ -7,9 +7,10 @@ cap = cv2.VideoCapture(1) # Camera (alterar numero caso camera esteja em outro v
 font = cv2.FONT_HERSHEY_SIMPLEX
 width = int(cap.get(3))
 height = int(cap.get(4))
-# print(width,height)
+print(width//10,height//10)
 blank = np.zeros((400,400))
 #direction = 0
+firstlinedetect = False
 
 deteccoes = np.array([])
 lower_blue = np.array([100, 80,80])# array da cor mais clara time azul (alterar para a cor utilizada no robo físico)
@@ -141,17 +142,25 @@ while True:# Loop de repetição para ret e frame do vídeo
                 #Cálculo da área e remoção de elementos pequenos
                 area = cv2.contourArea(cnt)
 
-                if area > 50:
+                if area > 100:
                     cv2.drawContours(roi, [cnt], -1, (0, 255, 0),0)
                     xDir, yDir, wDir, hDir = cv2.boundingRect(cnt)
                     #cv2.rectangle(roi, (x,y), (x +w, y +h), (0, 255, 0), 3)
                     cv2.rectangle(roi, (xDir, yDir), (xDir + wDir, yDir + hDir), (0, 0, 0), 0)
                     np.append(deteccoes,[xDir,yDir,wDir,hDir])
                     roi = cv2.putText(roi,str("Dir"),(xDir+40,yDir-15),font,0.8,(255,0,255),2,cv2.LINE_AA)
-                    #direcao1x  = [(x+w//2),(y+h//2)] ; direcao1y = [(bola[0]+bola[2]//2),(bola[1]+bola[3]//2)]
-                    #roi = cv2.arrowedLine(roi,direcao1x,direcao1y,[255,255,255],5)
+                    '''direcao1x  = [(x+w//2),(y+h//2)] ; direcao1y = [(bola[0]+bola[2]//2),(bola[1]+bola[3]//2)]
+                    roi = cv2.arrowedLine(roi,direcao1x,direcao1y,[255,255,255],5)'''
 
-                    if y < (yDir - 5*y//100) and  x <= xDir <= x + w:
+                    if firstlinedetect == False:
+                        firstLine = [(xDir+(wDir//2)),(yDir + (hDir//2)),(x+(w//2)),(y+(h//2))]
+                        firstlinedetect = True
+                    roi = cv2.arrowedLine(roi,(firstLine[0],firstLine[1]),(firstLine[2],firstLine[3]),(255,0,0),5)
+                    line = [(xDir+(wDir//2)),(yDir + (hDir//2)),(x+(w//2)),(y+(h//2))]
+                    roi = cv2.arrowedLine(roi,(line[0],line[1]),(line[2],line[3]),(255,0,0),5)
+
+
+                    '''if y < (yDir - 5*y//100) and  x <= xDir <= x + w:
                         #print("left")
                         #print(bola[0])
                         if 0 < bola[0] <= x:
@@ -194,7 +203,7 @@ while True:# Loop de repetição para ret e frame do vídeo
                         elif 0 < bola[0] <= x:
                             print("virar esquerda")
                         elif 0 < (x+w) <= bola[0]:
-                            print("virar direita")
+                            print("virar direita")'''
 
                 
             roi = cv2.putText(roi,str(numeroNoTime+1),(x+40,y-15),font,0.8,(255,255,255),2,cv2.LINE_AA)
