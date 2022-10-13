@@ -3,11 +3,16 @@ import numpy as np
 
 import movimento
 
+def nothing (x): pass
+
 '''
 TODO:
 - deletar detecções e integrar o teste grade
 - passar pelo centro pro astar
 - tirar os ifs e deixar só o vetor que a gente descobriu como achar
+- adicionar outras cores e inserir no loop
+- ver regras
+    - ver regras de cor (/+quantidade)
 '''
 
 time = 0 # 0 para time azul, 1 para time amarelo
@@ -20,7 +25,7 @@ blank = np.zeros((400,400))
 firstlinedetect = False #debug
 grade = np.zeros([height//10, width//10,3]) #inicializar grade pro a*
 
-deteccoes = np.array([])
+deteccoes = np.array([]) #deletar
 lower_blue = np.array([100, 80, 80])# array da cor mais clara time azul (alterar para a cor utilizada no robo físico)
 upper_blue = np.array([110,255,255])# array da cor mais escura time azul (alterar para a cor utilizada no robo físico)
 lower_yellow = np.array([26, 50, 50])# array da cor mais clara time amarelo (alterar para a cor utilizada no robo físico)
@@ -31,16 +36,6 @@ lower_ball = np.array([0, 50, 50])
 upper_ball = np.array([16,255,255])
 lower_green = np.array([80, 50, 50])
 upper_green = np.array([90,255,255])
-
-# menu interativo
-def nothing(x): pass
-
-cv2.namedWindow("blank") # alterar primeiro valor que aparece para atualizar valores encontrados nas mascaras
-cv2.createTrackbar("lowerBlue","blank",102,120,nothing) ; cv2.createTrackbar("upperBlue","blank",110,120,nothing)
-cv2.createTrackbar("lowerYellow","blank",24,40,nothing) ; cv2.createTrackbar("upperYellow","blank",34,40,nothing)
-cv2.createTrackbar("lowerBall","blank",10,30,nothing)   ; cv2.createTrackbar("upperBall","blank",20,30,nothing)
-cv2.createTrackbar("lowerTeam","blank",10,180,nothing)  ; cv2.createTrackbar("upperTeam","blank",18,180,nothing)
-cv2.createTrackbar("lowerGreen","blank",80,100,nothing) ; cv2.createTrackbar("upperGreen","blank",90,100,nothing) 
 
 #thresholds:
 distancia = 200 # em milimetros
@@ -55,6 +50,14 @@ normalx = np.array([width,height]) ; normaly = np.array([0,0])
 direcao1x = np.array([0,0]) ; direcao1y = np.array([0,0])
 direcao1x = np.clip(direcao1x,0,height) ; direcao1y = np.clip(direcao1x,0,height)
 
+# menu interativo
+cv2.namedWindow("blank") # alterar primeiro valor que aparece para atualizar valores encontrados nas mascaras
+cv2.createTrackbar("azul_min","blank",102,120,nothing)  ; cv2.createTrackbar("upperBlue","blank",110,120,nothing)
+cv2.createTrackbar("amarelo_min","blank",24,40,nothing) ; cv2.createTrackbar("upperYellow","blank",34,40,nothing)
+cv2.createTrackbar("bola_min","blank",10,30,nothing)    ; cv2.createTrackbar("upperBall","blank",20,30,nothing)
+cv2.createTrackbar("verde_min","blank",80,100,nothing)  ; cv2.createTrackbar("upperGreen","blank",90,100,nothing) 
+cv2.createTrackbar("distância","blank",200,3000,nothing)
+
 #print(tamanhoAumentar)
 if time == 0:
     lower_color = lower_blue ; lower_enemy = lower_yellow
@@ -63,17 +66,19 @@ else:
     lower_color = lower_yellow ; lower_enemy = lower_blue
     upper_color = upper_yellow ; upper_enemy = upper_blue
 
+
+
 while True:# Loop de repetição para ret e frame do vídeo
     ret, frame = cap.read() # alterar "tela" para "frame" e utilizar a linha de baixo caso necessário diminuir a resolução da imagem
     tela = cv2.resize(frame,(0,0),fx=1,fy=1)
     # Extrair a região de interesse:
     '''roi =  frame[x:x+?,y:y+?] # neste caso foi utilizada toda a imagem, mas pode ser alterado'''
     
-    lower_blue[0] = cv2.getTrackbarPos('lowerBlue', 'blank') ; upper_blue[0] = cv2.getTrackbarPos('upperBlue', 'blank')
-    lower_yellow[0] = cv2.getTrackbarPos('lowerYellow', 'blank') ; upper_yellow[0] = cv2.getTrackbarPos('upperYellow', 'blank')
-    lower_ball[0] = cv2.getTrackbarPos('lowerBall', 'blank') ; upper_ball[0] = cv2.getTrackbarPos('upperBall', 'blank')
-    lower_teamColor[0] = cv2.getTrackbarPos('lowerTeam', 'blank') ; upper_teamColor[0] = cv2.getTrackbarPos('upperTeam', 'blank')
-    lower_green[0] = cv2.getTrackbarPos('lowerGreen', 'blank') ; upper_green[0] = cv2.getTrackbarPos('upperGreen', 'blank')
+    lower_blue[0]   = cv2.getTrackbarPos('azul_min', 'blank')    ; upper_blue[0] = cv2.getTrackbarPos('upperBlue', 'blank')
+    lower_yellow[0] = cv2.getTrackbarPos('amarelo_min', 'blank') ; upper_yellow[0] = cv2.getTrackbarPos('upperYellow', 'blank')
+    lower_ball[0]   = cv2.getTrackbarPos('bola_min', 'blank')    ; upper_ball[0] = cv2.getTrackbarPos('upperBall', 'blank')
+    lower_green[0]  = cv2.getTrackbarPos('verde_min', 'blank')   ; upper_green[0] = cv2.getTrackbarPos('upperGreen', 'blank')
+    distancia = cv2.getTrackbarPos('distância','blank')
 
     #1 Detecção dos membros da equipe:
     hsv = cv2.cvtColor(tela, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
