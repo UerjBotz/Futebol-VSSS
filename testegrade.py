@@ -11,7 +11,7 @@ height = int(cap.get(4))
 blank = np.zeros((400,400))
 #direction = 0
 firstlinedetect = False
-grade = np.zeros([height//10,width//10,3])
+grade = np.zeros([height//10,width//10,3]) ##############
 
 deteccoes = np.array([])
 lower_blue = np.array([100, 80,80])# array da cor mais clara time azul (alterar para a cor utilizada no robo físico)
@@ -98,7 +98,9 @@ while True:# Loop de repetição para ret e frame do vídeo
             bola[0] = xbola ; bola[1] = ybola ; bola[2] = wbola ; bola[3] = hbola
             #cv2.rectangle(roi, (x,y), (x +w, y +h), (0, 255, 0), 3)
             cv2.rectangle(roi, (xbola, ybola), (xbola + wbola, ybola + hbola), (0, 255, 0), 0)
-            cv2.rectangle(grade,(xbola//10,ybola//10),(xbola//10 + wbola//10, ybola//10 + hbola//10),(0,255,0),-1)
+            #cv2.rectangle(grade,(xbola//10,ybola//10),(xbola//10 + wbola//10, ybola//10 + hbola//10),(0,255,0),-1) #####################
+            #print(xbola//10,ybola//10,wbola//10,hbola//10) 
+            grade[ybola//10][xbola//10] = [0,255,0]
             #print(xbola//10,ybola//10,wbola//10,hbola//10)
             #print(width//10,height//10)
             np.append(deteccoes,[xbola,ybola,wbola,hbola])
@@ -116,7 +118,7 @@ while True:# Loop de repetição para ret e frame do vídeo
             x, y, w, h = cv2.boundingRect(cnt)
             cv2.rectangle(roi, (x, y), (x + w, y + h), (255, 0, 0), 0)
             #np.append(deteccoes,[x,y,w,h])
-            cv2.rectangle(grade,(x//10,y//10),(x//10 + w//10, y//10 + h//10),(255,0,0),-1)
+            cv2.rectangle(grade,(x//10,y//10),(x//10 + w//10, y//10 + h//10),(255,0,0),-1) #################
             
             #print(x//10,y//10,w//10,h//10)
 
@@ -227,15 +229,17 @@ while True:# Loop de repetição para ret e frame do vídeo
             cv2.rectangle(roi, (x, y), (x + w, y + h), (0, 0, 255), 0)
             np.append(deteccoes,[x,y,w,h])
             roi = cv2.putText(roi,str("enemy"),(x+40,y-15),font,0.8,(0,0,255),2,cv2.LINE_AA)
-            cv2.rectangle(grade,(x//10,y//10),(x//10 + w//10, y//10 + h//10),(0,0,255),-1)
+            cv2.rectangle(grade,(x//10,y//10),(x//10 + w//10, y//10 + h//10),(0,0,255),-1) ################
 
     'print(deteccoes)'
     cv2.imshow("blank",blank)
     #cv2.imshow("Mask", mask)#Exibe a máscara("Mask") do vídeo
     cv2.imshow("ROI",roi)#Exibe a filmagem("ROI") do vídeo
-    gradeX = cv2.resize(grade,(0,0),fx=10,fy=10)
+    
+    gradeX = cv2.resize(grade,(0,0),fx=10,fy=10) ########### pra enxergar
     cv2.imshow("gradeX",gradeX)#Exibe a filmagem("grade") do vídeo
-    grade = np.zeros([height//10,width//10,3])
+    grade = np.zeros([height//10,width//10,3]) ########## reseta
+
     #cv2.imshow("usada",usada)#Exibe a filmagem("ROI") do vídeo
     if cv2.waitKey(25) == ord('q'):#tempo de exibição infinito (0) ou até se apertar a tecla q
         break

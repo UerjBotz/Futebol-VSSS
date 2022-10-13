@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+import movimento
+
 '''
 TODO:
 - deletar detecções e integrar o teste grade
@@ -14,10 +16,9 @@ cap = cv2.VideoCapture(0) # Camera (alterar numero caso camera esteja em outro v
 font = cv2.FONT_HERSHEY_SIMPLEX
 width = int(cap.get(3))
 height = int(cap.get(4))
-print(width//10,height//10)
 blank = np.zeros((400,400))
-#direction = 0
 firstlinedetect = False #debug
+grade = np.zeros([height//10, width//10,3]) #inicializar grade pro a*
 
 deteccoes = np.array([])
 lower_blue = np.array([100, 80, 80])# array da cor mais clara time azul (alterar para a cor utilizada no robo físico)
@@ -26,9 +27,9 @@ lower_yellow = np.array([26, 50, 50])# array da cor mais clara time amarelo (alt
 upper_yellow = np.array([46,255,255])# array da cor mais escura time amarelo (alterar para a cor utilizada no robo físico)
 lower_teamColor = np.array([110, 50, 50])# array da cor mais clara do membro do time
 upper_teamColor = np.array([180,255,255])# array da cor mais escura do membro do time
-lower_ball = np.array([0, 50,50])
+lower_ball = np.array([0, 50, 50])
 upper_ball = np.array([16,255,255])
-lower_green = np.array([80,50,50])
+lower_green = np.array([80, 50, 50])
 upper_green = np.array([90,255,255])
 
 # menu interativo
@@ -37,8 +38,8 @@ def nothing(x): pass
 cv2.namedWindow("blank") # alterar primeiro valor que aparece para atualizar valores encontrados nas mascaras
 cv2.createTrackbar("lowerBlue","blank",102,120,nothing) ; cv2.createTrackbar("upperBlue","blank",110,120,nothing)
 cv2.createTrackbar("lowerYellow","blank",24,40,nothing) ; cv2.createTrackbar("upperYellow","blank",34,40,nothing)
-cv2.createTrackbar("lowerBall","blank",10,30,nothing) ; cv2.createTrackbar("upperBall","blank",20,30,nothing)
-cv2.createTrackbar("lowerTeam","blank",10,180,nothing) ; cv2.createTrackbar("upperTeam","blank",18,180,nothing)
+cv2.createTrackbar("lowerBall","blank",10,30,nothing)   ; cv2.createTrackbar("upperBall","blank",20,30,nothing)
+cv2.createTrackbar("lowerTeam","blank",10,180,nothing)  ; cv2.createTrackbar("upperTeam","blank",18,180,nothing)
 cv2.createTrackbar("lowerGreen","blank",80,100,nothing) ; cv2.createTrackbar("upperGreen","blank",90,100,nothing) 
 
 #thresholds:
@@ -81,10 +82,10 @@ while True:# Loop de repetição para ret e frame do vídeo
     contornos, _ =  cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     maskBall = cv2.inRange(hsv,lower_ball,upper_ball)
     maskEnemy = cv2.inRange(hsv,lower_enemy,upper_enemy)
-    testando, maskBall = cv2.threshold(maskBall, 254, 255, cv2.THRESH_BINARY)
-    testando2, maskEnemy = cv2.threshold(maskEnemy, 254, 255, cv2.THRESH_BINARY)
-    contornoBall, testando =  cv2.findContours(maskBall, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contornosEnemy, testando2 =  cv2.findContours(maskEnemy, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    _, maskBall = cv2.threshold(maskBall, 254, 255, cv2.THRESH_BINARY)
+    _, maskEnemy = cv2.threshold(maskEnemy, 254, 255, cv2.THRESH_BINARY)
+    contornoBall, _ =  cv2.findContours(maskBall, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contornosEnemy, _ =  cv2.findContours(maskEnemy, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
     maskDir = cv2.inRange(hsv,lower_green,upper_green)
     testando3, maskDir = cv2.threshold(maskDir, 254, 255, cv2.THRESH_BINARY)
@@ -104,7 +105,8 @@ while True:# Loop de repetição para ret e frame do vídeo
             cv2.rectangle(tela, (xbola, ybola), (xbola + wbola, ybola + hbola), (0, 255, 0), 0)
             np.append(deteccoes,[xbola,ybola,wbola,hbola])
             tela = cv2.putText(tela,str("ball"),(xbola+40,ybola-15),font,0.8,(255,255,0),2,cv2.LINE_AA)
-
+            grade[ybola//10][xbola//10][0] = 255 #seta o primeiro valor de cor do pixel
+            
     #print(bola)
 
     for cnt in contornos:
@@ -119,6 +121,8 @@ while True:# Loop de repetição para ret e frame do vídeo
             #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3)
             cv2.rectangle(tela, (x, y), (x + w, y + h), (255, 0, 0), 0)
             np.append(deteccoes,[x,y,w,h])
+
+            grade[y//10][x//10][0] = 150 #seta o primeiro valor de cor do pixel
 
             hsvNum = hsv[max(y-tamanhoAumentar,0) : min(y+h+tamanhoAumentar,height),  max(x-tamanhoAumentar,0): min(x+w+tamanhoAumentar,width)] #clampa
             '''if len(usada) == 0 or len(usada[0]) == 0: # resolvendo bugs de gravação
@@ -221,6 +225,8 @@ while True:# Loop de repetição para ret e frame do vídeo
         if area > 100: #ver se usar a tolerância
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
             x, y, w, h = cv2.boundingRect(cnt)
+            grade[y//10][x//10][0] = 80 #seta o primeiro valor de cor do pixel
+
             #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3) #debug? ver
             cv2.rectangle(tela, (x, y), (x + w, y + h), (0, 0, 255), 0)
             np.append(deteccoes,[x,y,w,h])
@@ -230,6 +236,10 @@ while True:# Loop de repetição para ret e frame do vídeo
     cv2.imshow("blank", blank)
     cv2.imshow("Mask", mask) #Exibe a máscara("Mask") do vídeo
     cv2.imshow("tela", tela) #Exibe a filmagem("tela") do vídeo
+
+    cv2.imshow("grade", cv2.resize(grade,(0,0),fx=10,fy=10)) #Exibe a filmagem("grade") do vídeo
+    grade = np.zeros([height//10,width//10,3]) # reseta
+
     #cv2.imshow("usada",usada)#Exibe a filmagem("ROI") do vídeo
     if cv2.waitKey(25) == ord('q'): break #tempo de exibição infinito (0) ou até se apertar a tecla q
 

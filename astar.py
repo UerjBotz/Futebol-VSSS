@@ -3,7 +3,6 @@
 from warnings import warn
 import heapq
 
-
 class Node():
     """A node class for A* Pathfinding"""
 
