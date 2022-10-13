@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 time = 0 # 0 para time azul, 1 para time amarelo
-cap = cv2.VideoCapture(1) # Camera (alterar numero caso camera esteja em outro valor)
+cap = cv2.VideoCapture(0) # Camera (alterar numero caso camera esteja em outro valor)
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 width = int(cap.get(3))

@@ -1,8 +1,14 @@
 import cv2
 import numpy as np
 
+'''
+TODO:
+- ver se detecções vai ser útil (talvez seja pro pathfinding)
+- 
+'''
+
 time = 0 # 0 para time azul, 1 para time amarelo
-cap = cv2.VideoCapture(1) # Camera (alterar numero caso camera esteja em outro valor)
+cap = cv2.VideoCapture(0) # Camera (alterar numero caso camera esteja em outro valor)
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 width = int(cap.get(3))
@@ -10,23 +16,22 @@ height = int(cap.get(4))
 print(width//10,height//10)
 blank = np.zeros((400,400))
 #direction = 0
-firstlinedetect = False
+firstlinedetect = False #debug
 
 deteccoes = np.array([])
-lower_blue = np.array([100, 80,80])# array da cor mais clara time azul (alterar para a cor utilizada no robo físico)
-upper_blue = np.array([110, 255, 255])# array da cor mais escura time azul (alterar para a cor utilizada no robo físico)
-lower_yellow = np.array([26, 50,50])# array da cor mais clara time amarelo (alterar para a cor utilizada no robo físico)
-upper_yellow = np.array([46, 255, 255])# array da cor mais escura time amarelo (alterar para a cor utilizada no robo físico)
-lower_teamColor = np.array([110, 50,50])# array da cor mais clara do membro do time
-upper_teamColor = np.array([180, 255, 255])# array da cor mais escura do membro do time
+lower_blue = np.array([100, 80, 80])# array da cor mais clara time azul (alterar para a cor utilizada no robo físico)
+upper_blue = np.array([110,255,255])# array da cor mais escura time azul (alterar para a cor utilizada no robo físico)
+lower_yellow = np.array([26, 50, 50])# array da cor mais clara time amarelo (alterar para a cor utilizada no robo físico)
+upper_yellow = np.array([46,255,255])# array da cor mais escura time amarelo (alterar para a cor utilizada no robo físico)
+lower_teamColor = np.array([110, 50, 50])# array da cor mais clara do membro do time
+upper_teamColor = np.array([180,255,255])# array da cor mais escura do membro do time
 lower_ball = np.array([0, 50,50])
 upper_ball = np.array([16,255,255])
 lower_green = np.array([80,50,50])
 upper_green = np.array([90,255,255])
 
 # menu interativo
-def nothing(x):
-    pass
+def nothing(x): pass
 
 cv2.namedWindow("blank") # alterar primeiro valor que aparece para atualizar valores encontrados nas mascaras
 cv2.createTrackbar("lowerBlue","blank",102,120,nothing) ; cv2.createTrackbar("upperBlue","blank",110,120,nothing)
@@ -60,7 +65,7 @@ while True:# Loop de repetição para ret e frame do vídeo
     ret, frame = cap.read() # alterar "tela" para "frame" e utilizar a linha de baixo caso necessário diminuir a resolução da imagem
     tela = cv2.resize(frame,(0,0),fx=1,fy=1)
     # Extrair a região de interesse:
-    '''tela =  frame[x:x+?,y:y+?] # neste caso foi utilizada toda a imagem, mas pode ser alterado'''
+    '''roi =  frame[x:x+?,y:y+?] # neste caso foi utilizada toda a imagem, mas pode ser alterado'''
     
     lower_blue[0] = cv2.getTrackbarPos('lowerBlue', 'blank') ; upper_blue[0] = cv2.getTrackbarPos('upperBlue', 'blank')
     lower_yellow[0] = cv2.getTrackbarPos('lowerYellow', 'blank') ; upper_yellow[0] = cv2.getTrackbarPos('upperYellow', 'blank')
@@ -216,7 +221,7 @@ while True:# Loop de repetição para ret e frame do vídeo
         if area > 100: #ver se usar a tolerância
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
             x, y, w, h = cv2.boundingRect(cnt)
-            #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3)
+            #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3) #debug? ver
             cv2.rectangle(tela, (x, y), (x + w, y + h), (0, 0, 255), 0)
             np.append(deteccoes,[x,y,w,h])
             tela = cv2.putText(tela,str("enemy"),(x+40,y-15),font,0.8,(0,0,255),2,cv2.LINE_AA)
