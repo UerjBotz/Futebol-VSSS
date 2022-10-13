@@ -13,6 +13,7 @@ TODO:
 - adicionar outras cores e inserir no loop
 - ver regras
     - ver regras de cor (/+quantidade)
+- ver membro do time
 '''
 
 time = 0 # 0 para time azul, 1 para time amarelo
@@ -22,7 +23,6 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 width = int(cap.get(3))
 height = int(cap.get(4))
 blank = np.zeros((400,400))
-firstlinedetect = False #debug
 grade = np.zeros([height//10, width//10,3]) #inicializar grade pro a*
 
 deteccoes = np.array([]) #deletar
@@ -30,22 +30,20 @@ lower_blue = np.array([100, 80, 80])# array da cor mais clara time azul (alterar
 upper_blue = np.array([110,255,255])# array da cor mais escura time azul (alterar para a cor utilizada no robo físico)
 lower_yellow = np.array([26, 50, 50])# array da cor mais clara time amarelo (alterar para a cor utilizada no robo físico)
 upper_yellow = np.array([46,255,255])# array da cor mais escura time amarelo (alterar para a cor utilizada no robo físico)
-lower_teamColor = np.array([110, 50, 50])# array da cor mais clara do membro do time
-upper_teamColor = np.array([180,255,255])# array da cor mais escura do membro do time
 lower_ball = np.array([0, 50, 50])
 upper_ball = np.array([16,255,255])
 lower_green = np.array([80, 50, 50])
 upper_green = np.array([90,255,255])
 
 #thresholds:
-distancia = 200 # em milimetros
+distancia = 300 # em milimetros
 areaAzul = 18000*(100**2)/(distancia**2) # formula(d) = (areapixelsmedida*distanciamedida^2)/(d)^2
 areaRosa = areaAzul*(280/1200) # multiplica a azul pela proporção entre os retângulos pra achar a rosa
 areaRobo = areaAzul*(7412/1200) #multiplica a azul pela proporção entre os retângulos pra achar o robo inteiro
 tamanhoAumentar = int((areaRobo**(1/2))/2)
 tolerancia = 50/100
 
-# vetor direção
+# vetor direção #(não usado. mudar) #deletar
 normalx = np.array([width,height]) ; normaly = np.array([0,0])
 direcao1x = np.array([0,0]) ; direcao1y = np.array([0,0])
 direcao1x = np.clip(direcao1x,0,height) ; direcao1y = np.clip(direcao1x,0,height)
@@ -130,28 +128,17 @@ while True:# Loop de repetição para ret e frame do vídeo
             grade[y//10][x//10][0] = 150 #seta o primeiro valor de cor do pixel
 
             hsvNum = hsv[max(y-tamanhoAumentar,0) : min(y+h+tamanhoAumentar,height),  max(x-tamanhoAumentar,0): min(x+w+tamanhoAumentar,width)] #clampa
-            '''if len(usada) == 0 or len(usada[0]) == 0: # resolvendo bugs de gravação
-                break'''
+            #if len(usada) == 0 or len(usada[0]) == 0: break # resolvendo bugs de gravação (resolvido de outra forma)
 
             # detecção do num no time
             cv2.imshow("usada",hsvNum)#Exibe a filmagem("tela") do vídeo
-            #hsvNum = cv2.cvtColor(usada, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
-            maskNum = cv2.inRange(hsvNum, lower_teamColor, upper_teamColor) # máscara para detecção de um objeto
-            Num, maskNum = cv2.threshold(maskNum, 254, 255, cv2.THRESH_BINARY)
-            contornosNum, Num =  cv2.findContours(maskNum, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
             numeroNoTime = 0
+
             maskDir = cv2.inRange(hsv,lower_green,upper_green)
-            testando3, maskDir = cv2.threshold(maskDir, 254, 255, cv2.THRESH_BINARY)
-            contornoDir, testando3 =  cv2.findContours(maskDir, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            for cntNum in contornosNum:
-                areaNum = cv2.contourArea(cntNum)
-                #if(areaRosa*(1-tolerancia) <= areaNum <= areaRosa*(1+tolerancia)):
-                if(areaNum > 1):
-                    cv2.drawContours(tela, [cntNum], -1, (255, 255, 255),0)
-                    xnum, ynum, wnum, hnum = cv2.boundingRect(cntNum)
-                    #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3)
-                    cv2.rectangle(tela, (xnum, ynum), (xnum + wnum, ynum + hnum), (0, 0, 255), 3)
-                    numeroNoTime += 1
+            _, maskDir = cv2.threshold(maskDir, 254, 255, cv2.THRESH_BINARY)
+            contornoDir, _ =  cv2.findContours(maskDir, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            
                     
             for cnt in contornoDir:
                 #Cálculo da área e remoção de elementos pequenos
@@ -167,13 +154,10 @@ while True:# Loop de repetição para ret e frame do vídeo
                     '''direcao1x  = [(x+w//2),(y+h//2)] ; direcao1y = [(bola[0]+bola[2]//2),(bola[1]+bola[3]//2)]
                     tela = cv2.arrowedLine(tela,direcao1x,direcao1y,[255,255,255],5)'''
 
-                    if firstlinedetect == False: #debug
-                        firstLine = [(xDir+(wDir//2)),(yDir + (hDir//2)),(x+(w//2)),(y+(h//2))]
-                        firstlinedetect = True
+                    firstLine = [(xDir+(wDir//2)),(yDir + (hDir//2)),(x+(w//2)),(y+(h//2))]
                     tela = cv2.arrowedLine(tela,(firstLine[0],firstLine[1]),(firstLine[2],firstLine[3]),(255,0,0),5)
                     line = [(xDir+(wDir//2)),(yDir + (hDir//2)),(x+(w//2)),(y+(h//2))]
                     tela = cv2.arrowedLine(tela,(line[0],line[1]),(line[2],line[3]),(255,0,0),5)
-
 
                     '''if y < (yDir - 5*y//100) and  x <= xDir <= x + w:
                         #print("left")
@@ -186,7 +170,6 @@ while True:# Loop de repetição para ret e frame do vídeo
                             print("virar direita")
                         elif 0 < (y+h) <= bola[1]:
                             print("virar esquerda")
-
                     elif y > (yDir - 5*y//100) and (x - (20*w//100)) <= xDir <= (x + (20*w//100)):
                         #print("right")
                         if 0 < bola[0] <= x:
@@ -197,7 +180,6 @@ while True:# Loop de repetição para ret e frame do vídeo
                             print("virar esquerda")
                         elif 0 < (y+h) <= bola[1]:
                             print("virar direita")
-                        
                     elif x > (xDir -5*y//100) and y <= yDir <= y + h:
                         #print("up")
                         if 0 < bola[1] <= y:
@@ -208,7 +190,6 @@ while True:# Loop de repetição para ret e frame do vídeo
                             print("virar esquerda")
                         elif 0 < (x+w) <= bola[0]:
                             print("virar direita")
-
                     elif x < (xDir -5*y//100) and (y - (20*h//100)) <= yDir <= (y + (20*h//100)):
                         #print("down")
                         if 0 < bola[1] <= y:
