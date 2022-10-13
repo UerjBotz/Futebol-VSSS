@@ -57,10 +57,10 @@ else:
     upper_color = upper_yellow ; upper_enemy = upper_blue
 
 while True:# Loop de repetição para ret e frame do vídeo
-    ret, frame = cap.read() # alterar "roi" para "frame" e utilizar a linha de baixo caso necessário diminuir a resolução da imagem
-    roi = cv2.resize(frame,(0,0),fx=1,fy=1)
+    ret, frame = cap.read() # alterar "tela" para "frame" e utilizar a linha de baixo caso necessário diminuir a resolução da imagem
+    tela = cv2.resize(frame,(0,0),fx=1,fy=1)
     # Extrair a região de interesse:
-    '''roi =  frame[x:x+?,y:y+?] # neste caso foi utilizada toda a imagem, mas pode ser alterado'''
+    '''tela =  frame[x:x+?,y:y+?] # neste caso foi utilizada toda a imagem, mas pode ser alterado'''
     
     lower_blue[0] = cv2.getTrackbarPos('lowerBlue', 'blank') ; upper_blue[0] = cv2.getTrackbarPos('upperBlue', 'blank')
     lower_yellow[0] = cv2.getTrackbarPos('lowerYellow', 'blank') ; upper_yellow[0] = cv2.getTrackbarPos('upperYellow', 'blank')
@@ -69,7 +69,7 @@ while True:# Loop de repetição para ret e frame do vídeo
     lower_green[0] = cv2.getTrackbarPos('lowerGreen', 'blank') ; upper_green[0] = cv2.getTrackbarPos('upperGreen', 'blank')
 
     #1 Detecção dos membros da equipe:
-    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
+    hsv = cv2.cvtColor(tela, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
     mask = cv2.inRange(hsv, lower_color, upper_color) # máscara para detecção de um objeto
     _, mask = cv2.threshold(mask, 254, 255, cv2.THRESH_BINARY)
     contornos, _ =  cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -90,15 +90,15 @@ while True:# Loop de repetição para ret e frame do vídeo
         #Cálculo da área e remoção de elementos pequenos
         area = cv2.contourArea(cnt)
 
-        if area > 100:
-
-            cv2.drawContours(roi, [cnt], -1, (0, 255, 0),0)
+        if area > 100: # ver se usar a tolerância
+            cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
             xbola, ybola, wbola, hbola = cv2.boundingRect(cnt)
             bola[0] = xbola ; bola[1] = ybola ; bola[2] = wbola ; bola[3] = hbola
-            #cv2.rectangle(roi, (x,y), (x +w, y +h), (0, 255, 0), 3)
-            cv2.rectangle(roi, (xbola, ybola), (xbola + wbola, ybola + hbola), (0, 255, 0), 0)
+            #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3)
+            cv2.rectangle(tela, (xbola, ybola), (xbola + wbola, ybola + hbola), (0, 255, 0), 0)
             np.append(deteccoes,[xbola,ybola,wbola,hbola])
-            roi = cv2.putText(roi,str("ball"),(xbola+40,ybola-15),font,0.8,(255,255,0),2,cv2.LINE_AA)
+            tela = cv2.putText(tela,str("ball"),(xbola+40,ybola-15),font,0.8,(255,255,0),2,cv2.LINE_AA)
+
     #print(bola)
 
     for cnt in contornos:
@@ -108,10 +108,10 @@ while True:# Loop de repetição para ret e frame do vídeo
 
             #print(area) #debug
 
-            cv2.drawContours(roi, [cnt], -1, (0, 255, 0),0)
+            cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
             x, y, w, h = cv2.boundingRect(cnt)
-            #cv2.rectangle(roi, (x,y), (x +w, y +h), (0, 255, 0), 3)
-            cv2.rectangle(roi, (x, y), (x + w, y + h), (255, 0, 0), 0)
+            #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3)
+            cv2.rectangle(tela, (x, y), (x + w, y + h), (255, 0, 0), 0)
             np.append(deteccoes,[x,y,w,h])
 
             hsvNum = hsv[max(y-tamanhoAumentar,0) : min(y+h+tamanhoAumentar,height),  max(x-tamanhoAumentar,0): min(x+w+tamanhoAumentar,width)] #clampa
@@ -119,7 +119,7 @@ while True:# Loop de repetição para ret e frame do vídeo
                 break'''
 
             # detecção do num no time
-            cv2.imshow("usada",hsvNum)#Exibe a filmagem("ROI") do vídeo
+            cv2.imshow("usada",hsvNum)#Exibe a filmagem("tela") do vídeo
             #hsvNum = cv2.cvtColor(usada, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
             maskNum = cv2.inRange(hsvNum, lower_teamColor, upper_teamColor) # máscara para detecção de um objeto
             Num, maskNum = cv2.threshold(maskNum, 254, 255, cv2.THRESH_BINARY)
@@ -132,32 +132,33 @@ while True:# Loop de repetição para ret e frame do vídeo
                 areaNum = cv2.contourArea(cntNum)
                 #if(areaRosa*(1-tolerancia) <= areaNum <= areaRosa*(1+tolerancia)):
                 if(areaNum > 1):
-                    cv2.drawContours(roi, [cntNum], -1, (255, 255, 255),0)
+                    cv2.drawContours(tela, [cntNum], -1, (255, 255, 255),0)
                     xnum, ynum, wnum, hnum = cv2.boundingRect(cntNum)
-                    #cv2.rectangle(roi, (x,y), (x +w, y +h), (0, 255, 0), 3)
-                    cv2.rectangle(roi, (xnum, ynum), (xnum + wnum, ynum + hnum), (0, 0, 255), 3)
+                    #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3)
+                    cv2.rectangle(tela, (xnum, ynum), (xnum + wnum, ynum + hnum), (0, 0, 255), 3)
                     numeroNoTime += 1
                     
             for cnt in contornoDir:
                 #Cálculo da área e remoção de elementos pequenos
                 area = cv2.contourArea(cnt)
 
-                if area > 100:
-                    cv2.drawContours(roi, [cnt], -1, (0, 255, 0),0)
+                if area > 100: #ver se usar a tolerância
+                    cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
                     xDir, yDir, wDir, hDir = cv2.boundingRect(cnt)
-                    #cv2.rectangle(roi, (x,y), (x +w, y +h), (0, 255, 0), 3)
-                    cv2.rectangle(roi, (xDir, yDir), (xDir + wDir, yDir + hDir), (0, 0, 0), 0)
+                    #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3)
+                    cv2.rectangle(tela, (xDir, yDir), (xDir + wDir, yDir + hDir), (0, 0, 0), 0)
                     np.append(deteccoes,[xDir,yDir,wDir,hDir])
-                    roi = cv2.putText(roi,str("Dir"),(xDir+40,yDir-15),font,0.8,(255,0,255),2,cv2.LINE_AA)
+                    tela = cv2.putText(tela,str("Dir"),(xDir+40,yDir-15),font,0.8,(255,0,255),2,cv2.LINE_AA)
                     '''direcao1x  = [(x+w//2),(y+h//2)] ; direcao1y = [(bola[0]+bola[2]//2),(bola[1]+bola[3]//2)]
-                    roi = cv2.arrowedLine(roi,direcao1x,direcao1y,[255,255,255],5)'''
+                    tela = cv2.arrowedLine(tela,direcao1x,direcao1y,[255,255,255],5)'''
 
-                    if firstlinedetect == False:
+                    if firstlinedetect == False: #debug
                         firstLine = [(xDir+(wDir//2)),(yDir + (hDir//2)),(x+(w//2)),(y+(h//2))]
                         firstlinedetect = True
-                    roi = cv2.arrowedLine(roi,(firstLine[0],firstLine[1]),(firstLine[2],firstLine[3]),(255,0,0),5)
+                    
+                    tela = cv2.arrowedLine(tela,(firstLine[0],firstLine[1]),(firstLine[2],firstLine[3]),(255,0,0),5)
                     line = [(xDir+(wDir//2)),(yDir + (hDir//2)),(x+(w//2)),(y+(h//2))]
-                    roi = cv2.arrowedLine(roi,(line[0],line[1]),(line[2],line[3]),(255,0,0),5)
+                    tela = cv2.arrowedLine(tela,(line[0],line[1]),(line[2],line[3]),(255,0,0),5)
 
 
                     '''if y < (yDir - 5*y//100) and  x <= xDir <= x + w:
@@ -206,27 +207,26 @@ while True:# Loop de repetição para ret e frame do vídeo
                             print("virar direita")'''
 
                 
-            roi = cv2.putText(roi,str(numeroNoTime+1),(x+40,y-15),font,0.8,(255,255,255),2,cv2.LINE_AA)
+            tela = cv2.putText(tela,str(numeroNoTime+1),(x+40,y-15),font,0.8,(255,255,255),2,cv2.LINE_AA)
 
     for cnt in contornosEnemy:
         #Cálculo da área e remoção de elementos pequenos
         area = cv2.contourArea(cnt)
         
-        if area > 100:
-
-            cv2.drawContours(roi, [cnt], -1, (0, 255, 0),0)
+        if area > 100: #ver se usar a tolerância
+            cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
             x, y, w, h = cv2.boundingRect(cnt)
-            #cv2.rectangle(roi, (x,y), (x +w, y +h), (0, 255, 0), 3)
-            cv2.rectangle(roi, (x, y), (x + w, y + h), (0, 0, 255), 0)
+            #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3)
+            cv2.rectangle(tela, (x, y), (x + w, y + h), (0, 0, 255), 0)
             np.append(deteccoes,[x,y,w,h])
-            roi = cv2.putText(roi,str("enemy"),(x+40,y-15),font,0.8,(0,0,255),2,cv2.LINE_AA)
+            tela = cv2.putText(tela,str("enemy"),(x+40,y-15),font,0.8,(0,0,255),2,cv2.LINE_AA)
 
     'print(deteccoes)'
-    cv2.imshow("blank",blank)
-    cv2.imshow("Mask", mask)#Exibe a máscara("Mask") do vídeo
-    cv2.imshow("ROI",roi)#Exibe a filmagem("ROI") do vídeo
+    cv2.imshow("blank", blank)
+    cv2.imshow("Mask", mask) #Exibe a máscara("Mask") do vídeo
+    cv2.imshow("tela", tela) #Exibe a filmagem("tela") do vídeo
     #cv2.imshow("usada",usada)#Exibe a filmagem("ROI") do vídeo
-    if cv2.waitKey(25) == ord('q'):#tempo de exibição infinito (0) ou até se apertar a tecla q
-        break
+    if cv2.waitKey(25) == ord('q'): break #tempo de exibição infinito (0) ou até se apertar a tecla q
+
 cap.release()
 cv2.destroyAllWindows()
