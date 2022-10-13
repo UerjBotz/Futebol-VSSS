@@ -5,9 +5,13 @@ import movimento
 
 def nothing (x): pass
 
+def centro (x, y, w, h):
+    return (x+w//2, y+h//2)
+
 '''
 TODO:
 - deletar detecções e integrar o teste grade
+- deletar usada
 - passar pelo centro pro astar
 - tirar os ifs e deixar só o vetor que a gente descobriu como achar
 - adicionar outras cores e inserir no loop
@@ -65,7 +69,6 @@ else:
     upper_color = upper_yellow ; upper_enemy = upper_blue
 
 
-
 while True:# Loop de repetição para ret e frame do vídeo
     ret, frame = cap.read() # alterar "tela" para "frame" e utilizar a linha de baixo caso necessário diminuir a resolução da imagem
     tela = cv2.resize(frame,(0,0),fx=1,fy=1)
@@ -91,8 +94,8 @@ while True:# Loop de repetição para ret e frame do vídeo
     contornosEnemy, _ =  cv2.findContours(maskEnemy, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
     maskDir = cv2.inRange(hsv,lower_green,upper_green)
-    testando3, maskDir = cv2.threshold(maskDir, 254, 255, cv2.THRESH_BINARY)
-    contornoDir, testando3 =  cv2.findContours(maskDir, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    _, maskDir = cv2.threshold(maskDir, 254, 255, cv2.THRESH_BINARY)
+    contornoDir, _ =  cv2.findContours(maskDir, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     bola = [0,0,0,0]
 
@@ -104,34 +107,28 @@ while True:# Loop de repetição para ret e frame do vídeo
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
             xbola, ybola, wbola, hbola = cv2.boundingRect(cnt)
             bola[0] = xbola ; bola[1] = ybola ; bola[2] = wbola ; bola[3] = hbola
-            #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3)
             cv2.rectangle(tela, (xbola, ybola), (xbola + wbola, ybola + hbola), (0, 255, 0), 0)
             np.append(deteccoes,[xbola,ybola,wbola,hbola])
             tela = cv2.putText(tela,str("ball"),(xbola+40,ybola-15),font,0.8,(255,255,0),2,cv2.LINE_AA)
             grade[ybola//10][xbola//10][0] = 255 #seta o primeiro valor de cor do pixel
-            
-    #print(bola)
-
+ 
     for cnt in contornos:
         #Cálculo da área e remoção de elementos pequenos
         area = cv2.contourArea(cnt)
         if(areaAzul*(1-tolerancia) <= area <= areaAzul*(1+tolerancia)):
 
-            #print(area) #debug
-
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
             x, y, w, h = cv2.boundingRect(cnt)
-            #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3)
             cv2.rectangle(tela, (x, y), (x + w, y + h), (255, 0, 0), 0)
             np.append(deteccoes,[x,y,w,h])
 
-            grade[y//10][x//10][0] = 150 #seta o primeiro valor de cor do pixel
+            centrado = centro(x,y,w,h)
+            grade[centrado[1]//10][centrado[0]//10][0] = 150 #seta o primeiro valor de cor do pixel
 
             hsvNum = hsv[max(y-tamanhoAumentar,0) : min(y+h+tamanhoAumentar,height),  max(x-tamanhoAumentar,0): min(x+w+tamanhoAumentar,width)] #clampa
-            #if len(usada) == 0 or len(usada[0]) == 0: break # resolvendo bugs de gravação (resolvido de outra forma)
 
             # detecção do num no time
-            cv2.imshow("usada",hsvNum)#Exibe a filmagem("tela") do vídeo
+            cv2.imshow("usada", hsvNum)#Exibe a filmagem("tela") do vídeo
 
             numeroNoTime = 0
 
