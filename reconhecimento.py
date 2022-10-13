@@ -3,8 +3,9 @@ import numpy as np
 
 '''
 TODO:
-- ver se detecções vai ser útil (talvez seja pro pathfinding)
-- 
+- deletar detecções e integrar o teste grade
+- passar pelo centro pro astar
+- tirar os ifs e deixar só o vetor que a gente descobriu como achar
 '''
 
 time = 0 # 0 para time azul, 1 para time amarelo
@@ -160,7 +161,6 @@ while True:# Loop de repetição para ret e frame do vídeo
                     if firstlinedetect == False: #debug
                         firstLine = [(xDir+(wDir//2)),(yDir + (hDir//2)),(x+(w//2)),(y+(h//2))]
                         firstlinedetect = True
-                    
                     tela = cv2.arrowedLine(tela,(firstLine[0],firstLine[1]),(firstLine[2],firstLine[3]),(255,0,0),5)
                     line = [(xDir+(wDir//2)),(yDir + (hDir//2)),(x+(w//2)),(y+(h//2))]
                     tela = cv2.arrowedLine(tela,(line[0],line[1]),(line[2],line[3]),(255,0,0),5)
