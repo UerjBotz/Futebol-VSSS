@@ -38,7 +38,7 @@ def astar(matriz, inicial, final):
     # Loop until you find the final
     while len(lista_aberta) > 0:
 
-        # Get the current node
+        # Get the atual node
         node_atual = lista_aberta[0]
         index_atual = 0
         for index, item in enumerate(lista_aberta):
@@ -46,17 +46,17 @@ def astar(matriz, inicial, final):
                 node_atual = item
                 index_atual = index
 
-        # Pop current off open list, add to closed list
+        # Pop atual off open list, add to closed list
         lista_aberta.pop(index_atual)
         lista_fechada.append(node_atual)
 
         # Found the goal
         if node_atual == node_final:
             path = []
-            current = node_atual
-            while current is not None:
-                path.append(current.pos)
-                current = current.pai
+            atual = node_atual
+            while atual is not None:
+                path.append(atual.pos)
+                atual = atual.pai
             return path[::-1] # Return reversed path
 
         # Generate filhos
@@ -71,22 +71,20 @@ def astar(matriz, inicial, final):
                 continue
 
             # Make sure walkable terrain
-            if matriz[pos_node[0]][pos_node[1]] != 0:
-                continue
+            if matriz[pos_node[0][0]][pos_node[1][0]]: continue #último [0] pq cor.
 
             # Create new node
-            nova_node = Node(node_atual, pos_node)
+            node_nova = Node(node_atual, pos_node)
 
             # Append
-            filhos.append(nova_node)
+            filhos.append(node_nova)
 
         # Loop through filhos
         for filho in filhos:
 
             # filho is on the closed list
             for filho_fechado in lista_fechada:
-                if filho == filho_fechado:
-                    continue
+                if filho == filho_fechado: continue
 
             # Create the f, g, and h values
             filho.g = node_atual.g + 1
@@ -95,11 +93,11 @@ def astar(matriz, inicial, final):
 
             # filho is already in the open list
             for open_node in lista_aberta:
-                if filho == open_node and filho.g > open_node.g:
-                    continue
+                if filho == open_node and filho.g > open_node.g: continue
 
             # Add the filho to the open list
             lista_aberta.append(filho)
+        
 
 
 def main():
