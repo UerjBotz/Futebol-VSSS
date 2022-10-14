@@ -27,15 +27,16 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 width = int(cap.get(3))
 height = int(cap.get(4))
 blank = np.zeros((400,400))
+escalaGrade = 10 #quase não usada no código. problemas.
 grade = np.zeros([height//10, width//10,3]) #inicializar grade pro a*
 
-deteccoes = np.array([]) #deletar
+deteccoes  = np.array([]) #deletar
 lower_blue = np.array([100, 80, 80])# array da cor mais clara time azul (alterar para a cor utilizada no robo físico)
 upper_blue = np.array([110,255,255])# array da cor mais escura time azul (alterar para a cor utilizada no robo físico)
 lower_yellow = np.array([26, 50, 50])# array da cor mais clara time amarelo (alterar para a cor utilizada no robo físico)
 upper_yellow = np.array([46,255,255])# array da cor mais escura time amarelo (alterar para a cor utilizada no robo físico)
-lower_ball = np.array([0, 50, 50])
-upper_ball = np.array([16,255,255])
+lower_ball  = np.array([0, 50, 50])
+upper_ball  = np.array([16,255,255])
 lower_green = np.array([80, 50, 50])
 upper_green = np.array([90,255,255])
 
@@ -54,13 +55,12 @@ direcao1x = np.clip(direcao1x,0,height) ; direcao1y = np.clip(direcao1x,0,height
 
 # menu interativo
 cv2.namedWindow("blank") # alterar primeiro valor que aparece para atualizar valores encontrados nas mascaras
-cv2.createTrackbar("azul_min","blank",102,120,nothing)  ; cv2.createTrackbar("upperBlue","blank",110,120,nothing)
-cv2.createTrackbar("amarelo_min","blank",24,40,nothing) ; cv2.createTrackbar("upperYellow","blank",34,40,nothing)
-cv2.createTrackbar("bola_min","blank",10,30,nothing)    ; cv2.createTrackbar("upperBall","blank",20,30,nothing)
-cv2.createTrackbar("verde_min","blank",80,100,nothing)  ; cv2.createTrackbar("upperGreen","blank",90,100,nothing) 
+cv2.createTrackbar("azul_min","blank",102,120,nothing)  ; cv2.createTrackbar("azul_max","blank",110,120,nothing)
+cv2.createTrackbar("amarelo_min","blank",24,40,nothing) ; cv2.createTrackbar("amarelo_max","blank",34,40,nothing)
+cv2.createTrackbar("bola_min","blank",10,30,nothing)    ; cv2.createTrackbar("bola_max","blank",20,30,nothing)
+cv2.createTrackbar("verde_min","blank",80,100,nothing)  ; cv2.createTrackbar("verde_max","blank",90,100,nothing) 
 cv2.createTrackbar("distância","blank",200,3000,nothing)
 
-#print(tamanhoAumentar)
 if time == 0:
     lower_color = lower_blue ; lower_enemy = lower_yellow
     upper_color = upper_blue ; upper_enemy = upper_yellow
@@ -75,10 +75,10 @@ while True:# Loop de repetição para ret e frame do vídeo
     # Extrair a região de interesse:
     '''roi =  frame[x:x+?,y:y+?] # neste caso foi utilizada toda a imagem, mas pode ser alterado'''
     
-    lower_blue[0]   = cv2.getTrackbarPos('azul_min', 'blank')    ; upper_blue[0] = cv2.getTrackbarPos('upperBlue', 'blank')
-    lower_yellow[0] = cv2.getTrackbarPos('amarelo_min', 'blank') ; upper_yellow[0] = cv2.getTrackbarPos('upperYellow', 'blank')
-    lower_ball[0]   = cv2.getTrackbarPos('bola_min', 'blank')    ; upper_ball[0] = cv2.getTrackbarPos('upperBall', 'blank')
-    lower_green[0]  = cv2.getTrackbarPos('verde_min', 'blank')   ; upper_green[0] = cv2.getTrackbarPos('upperGreen', 'blank')
+    lower_blue[0]   = cv2.getTrackbarPos('azul_min', 'blank')    ; upper_blue[0] = cv2.getTrackbarPos('azul_max', 'blank')
+    lower_yellow[0] = cv2.getTrackbarPos('amarelo_min', 'blank') ; upper_yellow[0] = cv2.getTrackbarPos('amarelo_max', 'blank')
+    lower_ball[0]   = cv2.getTrackbarPos('bola_min', 'blank')    ; upper_ball[0] = cv2.getTrackbarPos('bola_max', 'blank')
+    lower_green[0]  = cv2.getTrackbarPos('verde_min', 'blank')   ; upper_green[0] = cv2.getTrackbarPos('verde_max', 'blank')
     distancia = cv2.getTrackbarPos('distância','blank')
 
     #1 Detecção dos membros da equipe:
@@ -123,7 +123,7 @@ while True:# Loop de repetição para ret e frame do vídeo
             np.append(deteccoes,[x,y,w,h])
 
             centrado = centro(x,y,w,h)
-            grade[centrado[1]//10][centrado[0]//10][0] = 150 #seta o primeiro valor de cor do pixel
+            grade[int(centrado[1]//escalaGrade)][int(centrado[0]//escalaGrade)][0] = 150 #seta o primeiro valor de cor do pixel
 
             hsvNum = hsv[max(y-tamanhoAumentar,0) : min(y+h+tamanhoAumentar,height),  max(x-tamanhoAumentar,0): min(x+w+tamanhoAumentar,width)] #clampa
 
