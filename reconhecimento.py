@@ -3,10 +3,12 @@ import numpy as np
 
 import movimento
 
-def nothing (x): pass
-
 def centro (x, y, w, h):
     return (x+w//2, y+h//2)
+
+blank = np.zeros((400,400))
+
+def nothing (x): pass
 
 '''
 TODO:
@@ -15,6 +17,7 @@ TODO:
 - passar pelo centro pro astar
 - tirar os ifs e deixar só o vetor que a gente descobriu como achar
 - adicionar outras cores e inserir no loop
+    - ajustar e pôr slider
 - ver regras
     - ver regras de cor (/+quantidade)
 - ver membro do time
@@ -24,9 +27,8 @@ time = 0 # 0 para time azul, 1 para time amarelo
 cap = cv2.VideoCapture(0) # Camera (alterar numero caso camera esteja em outro valor)
 
 font = cv2.FONT_HERSHEY_SIMPLEX
-width = int(cap.get(3))
+width  = int(cap.get(3))
 height = int(cap.get(4))
-blank = np.zeros((400,400))
 escalaGrade = 10 #quase não usada no código. problemas.
 grade = np.zeros([height//10, width//10,3]) #inicializar grade pro a*
 
@@ -35,10 +37,18 @@ lower_blue = np.array([100, 80, 80])# array da cor mais clara time azul (alterar
 upper_blue = np.array([110,255,255])# array da cor mais escura time azul (alterar para a cor utilizada no robo físico)
 lower_yellow = np.array([26, 50, 50])# array da cor mais clara time amarelo (alterar para a cor utilizada no robo físico)
 upper_yellow = np.array([46,255,255])# array da cor mais escura time amarelo (alterar para a cor utilizada no robo físico)
-lower_ball  = np.array([0, 50, 50])
+lower_ball  = np.array([ 0, 50, 50])
 upper_ball  = np.array([16,255,255])
 lower_green = np.array([80, 50, 50])
 upper_green = np.array([90,255,255])
+upper_roxo = np.array([90,255,255])
+lower_ciano = np.array([80, 50, 50])
+upper_ciano = np.array([90,255,255])
+lower_vermelho = np.array([80, 50, 50])
+upper_vermelho = np.array([90,255,255])
+lower_rosa = np.array([80, 50, 50])
+upper_rosa = np.array([90,255,255])
+
 
 #thresholds:
 distancia = 300 # em milimetros
