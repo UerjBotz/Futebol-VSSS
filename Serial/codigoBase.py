@@ -1,6 +1,5 @@
 # Python code transmits a byte 'A' to Arduino /Microcontroller to Blink LED
 # Requires PySerial
-
 # (c) www.xanthium.in 2022
 # Rahul.S
 
