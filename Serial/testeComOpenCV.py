@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 from pyserialF import serialStart, serialBlink, serialClose
 
-
 Serial = serialStart('COM5',9600)
 
 time = 0 # 0 para time azul, 1 para time amarelo
