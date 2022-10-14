@@ -5,7 +5,6 @@ def serialStart(porta,bit):
         
     # Receives a string from Arduino using readline()
     # Requires PySerial
-
     # (c) www.xanthium.in 2021
     # Rahul.S
 
