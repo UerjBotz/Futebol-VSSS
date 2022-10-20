@@ -81,7 +81,7 @@ else:
     upper_color = upper_yellow ; upper_enemy = upper_blue
 
 
-while True:# Loop de repetição para ret e frame do vídeo
+while True: # Loop de repetição para ret e frame do vídeo
     ret, frame = cap.read() # alterar "tela" para "frame" e utilizar a linha de baixo caso necessário diminuir a resolução da imagem
     tela = cv2.resize(frame,(0,0),fx=1,fy=1)
     # Extrair a região de interesse:
