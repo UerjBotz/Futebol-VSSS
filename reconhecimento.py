@@ -8,14 +8,14 @@ def centro (x, y, w, h):
 
 blank = np.zeros((400,400))
 
-def nothing (x): pass
+def nada (x): pass
 
 '''
 TODO:
 - arrumação:
-    - deletar detecções
     - deletar usada ou usar de verdade pra alguma coisa
-    - tirar os ifs e deixar só o vetor que a gente descobriu como achar **
+    - classe pro menu (com inseridor e mostrador de trackbar, desligador de ui)
+    - fazer função getcontornos
     - *
 - movimento:
     - astar
@@ -24,7 +24,8 @@ TODO:
     - movimentos em geral (estratégia de jogo, etc.)
     - integrar com a eletrônica (mandar movimentos via ESP)
 - geral:
-    - endireitar o vetor pra usar **
+    - adicionar area_bola, com o tamanho esperado em pixels
+    - endireitar o vetor pra usar
     - vetor bola-robô
     - adicionar outras cores e inserir no loop
         - ajustar e pôr slider
@@ -35,6 +36,7 @@ TODO:
     - ver membro do time e "personalidade"
 - propostas:
     - colocar TO-DO em outro arquivo (ver)
+    - colocar menu de seleção de cores em outro módulo
 '''
 
 time = 0 # 0 para time azul, 1 para time amarelo
@@ -42,13 +44,11 @@ cap = cv2.VideoCapture(0) # Camera (alterar numero caso camera esteja em outro v
 
 fonte = cv2.FONT_HERSHEY_SIMPLEX
 
-largura_tela  = int(cap.get(3))
-altura_tela = int(cap.get(4))
+largura_tela = int(cap.get(3))
+altura_tela  = int(cap.get(4))
 
 escala_grade = 10 #quase não usada no código. problemas.
 grade = np.zeros([altura_tela//10, largura_tela//10,3]) #inicializar grade pro a*
-
-deteccoes  = np.array([]) #deletar
 
 #cores (alterar de acordo com a cor utilizada no robo fisico)
               #times 
@@ -56,11 +56,12 @@ azul_min = np.array([100, 80, 80])
 azul_max = np.array([110,255,255])  
 amarelo_min = np.array([26, 50, 50]) 
 amarelo_max = np.array([46,255,255])
-              #ids
+              #bola
 bola_min  = np.array([ 0, 50, 50]) 
 bola_max  = np.array([16,255,255])
+              #ids (ajustar)
 verde_min = np.array([80, 50, 50])
-verde_max = np.array([90,255,255])
+verde_max = np.array([90,255,255]) #só ok até esse verde
 roxo_min  = np.array([80, 50, 50])
 roxo_max  = np.array([90,255,255])
 ciano_min = np.array([80, 50, 50])
@@ -73,33 +74,28 @@ rosa_max = np.array([90,255,255])
 #thresholds:
 distancia = 300 # em milimetros
 
-area_azul = 18000*(100**2)/(distancia**2) # formula(d) = (areapixelsmedida*distanciamedida^2)/(d)^2
-area_rosa = area_azul*(280/1200) # multiplica a azul pela proporção entre os retângulos pra achar a rosa
-area_robo = area_azul*(7412/1200) #multiplica a azul pela proporção entre os retângulos pra achar o robo inteiro
+area_ret_time = 18000*(100**2)/(distancia**2) # formula(d) = (areapixelsmedida*distanciamedida^2)/(d)^2
+area_roi_robo = area_ret_time*(7412/1200) #multiplica a "azul" pela proporção entre os retângulos pra achar o robo inteiro
+area_ret_ID   = area_ret_time*(280/1200) # multiplica a "azul" pela proporção entre os retângulos pra achar a "rosa"
 
-tamanho_aumentar = int((area_robo**(1/2))/2)
+tamanho_aumentar = int((area_roi_robo**(1/2))/2)
 tolerancia = 50/100
 
-# vetor direção #(não usado. mudar) #deletar
-normalx = np.array([largura_tela,altura_tela]) ; normaly = np.array([0,0])
-direcao1x = np.array([0,0]) ; direcao1y = np.array([0,0])
-direcao1x = np.clip(direcao1x,0,altura_tela) ; direcao1y = np.clip(direcao1x,0,altura_tela)
- 
-# menu interativo
-cv2.namedWindow("blank") # alterar primeiro valor que aparece para atualizar valores encontrados nas mascaras
-cv2.createTrackbar("azul_min","blank",102,120,nothing)  ; cv2.createTrackbar("azul_max","blank",110,120,nothing)
-cv2.createTrackbar("amarelo_min","blank",24,40,nothing) ; cv2.createTrackbar("amarelo_max","blank",34,40,nothing)
-cv2.createTrackbar("bola_min","blank",10,30,nothing)    ; cv2.createTrackbar("bola_max","blank",20,30,nothing)
-cv2.createTrackbar("verde_min","blank",80,100,nothing)  ; cv2.createTrackbar("verde_max","blank",90,100,nothing) 
-cv2.createTrackbar("distância","blank",200,3000,nothing)
+# menu interativo  # alterar primeiro valor que aparece para atualizar valores encontrados nas mascaras
+cv2.namedWindow("blank")
+cv2.createTrackbar("azul_min","blank",102,120,nada)  ; cv2.createTrackbar("azul_max","blank",110,120,nada)
+cv2.createTrackbar("amarelo_min","blank",24,40,nada) ; cv2.createTrackbar("amarelo_max","blank",34,40,nada)
+cv2.createTrackbar("bola_min","blank",10,30,nada)    ; cv2.createTrackbar("bola_max","blank",20,30,nada)
+cv2.createTrackbar("verde_min","blank",80,100,nada)  ; cv2.createTrackbar("verde_max","blank",90,100,nada) 
+cv2.createTrackbar("distância","blank",200,3000,nada)
 
 # cor dos times
 if time == 0: 
-    aliado_min = azul_min ; lower_enemy = amarelo_min
-    aliado_max = azul_max ; upper_enemy = amarelo_max
+    aliado_min = azul_min ; oponente_min = amarelo_min
+    aliado_max = azul_max ; oponente_max = amarelo_max
 else:
-    aliado_min = amarelo_min ; lower_enemy = azul_min
-    aliado_max = amarelo_max ; upper_enemy = azul_max
+    aliado_min = amarelo_min ; oponente_min = azul_min
+    aliado_max = amarelo_max ; oponente_max = azul_max
 
 
 while True: # Loop de repetição para ret e frame do vídeo
@@ -110,131 +106,87 @@ while True: # Loop de repetição para ret e frame do vídeo
     
     azul_min[0]    = cv2.getTrackbarPos('azul_min', 'blank')    ; azul_max[0]    = cv2.getTrackbarPos('azul_max', 'blank')
     amarelo_min[0] = cv2.getTrackbarPos('amarelo_min', 'blank') ; amarelo_max[0] = cv2.getTrackbarPos('amarelo_max', 'blank')
-    bola_min[0]    = cv2.getTrackbarPos('bola_min', 'blank')    ; bola_max[0]  = cv2.getTrackbarPos('bola_max', 'blank')
-    verde_min[0]   = cv2.getTrackbarPos('verde_min', 'blank')   ; verde_max[0] = cv2.getTrackbarPos('verde_max', 'blank')
+    bola_min[0]    = cv2.getTrackbarPos('bola_min', 'blank')    ; bola_max[0]    = cv2.getTrackbarPos('bola_max', 'blank')
+    verde_min[0]   = cv2.getTrackbarPos('verde_min', 'blank')   ; verde_max[0]   = cv2.getTrackbarPos('verde_max', 'blank')
     distancia = cv2.getTrackbarPos('distância','blank')
 
-    #1 Detecção dos membros da equipe:
+    #1 Detecção dos jogadores e bola
     hsv = cv2.cvtColor(tela, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
-    mask = cv2.inRange(hsv, aliado_min, aliado_max) # máscara para detecção de um objeto
-    
-    _, mask = cv2.threshold(mask, 254, 255, cv2.THRESH_BINARY)
-    contornos, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    maskBall = cv2.inRange(hsv,bola_min,bola_max)
-    maskEnemy = cv2.inRange(hsv,lower_enemy,upper_enemy)
-    _, maskBall = cv2.threshold(maskBall, 254, 255, cv2.THRESH_BINARY)
-    _, maskEnemy = cv2.threshold(maskEnemy, 254, 255, cv2.THRESH_BINARY)
 
-    contornoBall, _ =  cv2.findContours(maskBall, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contornosEnemy, _ =  cv2.findContours(maskEnemy, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
-    maskDir = cv2.inRange(hsv,verde_min,verde_max)
-    _, maskDir = cv2.threshold(maskDir, 254, 255, cv2.THRESH_BINARY)
-    contornoDir, _ =  cv2.findContours(maskDir, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    mascara_aliados   = cv2.inRange(hsv, aliado_min, aliado_max) # máscara para detecção de um aliado
+    _, mascara_aliados   = cv2.threshold(mascara_aliados, 254, 255, cv2.THRESH_BINARY) #oqq são esses 254, 255? #ver magic numbers
+    contornos_aliados, _ = cv2.findContours(mascara_aliados, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE) 
 
-    bola = [0,0,0,0]
+    #deixar essa parte de ID dentro do iterador de contorno_aliados
+    #mascara_IDs    = cv2.inRange(hsv,verde_min,verde_max) #ver se usar usada ou alguma coisa assim
+    #_, mascara_IDs   = cv2.threshold(mascara_IDs, 254, 255, cv2.THRESH_BINARY)
+    #contornos_ID, _ = cv2.findContours(mascara_IDs, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-    for cnt in contornoBall:
+    mascara_bola    = cv2.inRange(hsv, bola_min,bola_max)
+    _, mascara_bola   = cv2.threshold(mascara_bola, 254, 255, cv2.THRESH_BINARY)
+    contornos_bola, _ = cv2.findContours(mascara_bola, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    mascara_oponentes    = cv2.inRange(hsv, oponente_min,oponente_max)
+    _, mascara_oponentes   = cv2.threshold(mascara_oponentes, 254, 255, cv2.THRESH_BINARY)
+    contornos_oponentes, _ = cv2.findContours(mascara_oponentes, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    for cnt in contornos_bola:
         #Cálculo da área e remoção de elementos pequenos
         area = cv2.contourArea(cnt)
 
         if area > 100: # ver se usar a tolerância
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
-            xbola, ybola, wbola, hbola = cv2.boundingRect(cnt)
-            bola[0] = xbola ; bola[1] = ybola ; bola[2] = wbola ; bola[3] = hbola
-            cv2.rectangle(tela, (xbola, ybola), (xbola + wbola, ybola + hbola), (0, 255, 0), 0)
-            np.append(deteccoes,[xbola,ybola,wbola,hbola])
-            tela = cv2.putText(tela,str("ball"),(xbola+40,ybola-15),fonte,0.8,(255,255,0),2,cv2.LINE_AA)
-            grade[ybola//10][xbola//10][0] = 255 #seta o primeiro valor de cor do pixel
+            x_bola, y_bola, w_bola, h_bola = cv2.boundingRect(cnt)
+
+            cv2.rectangle(tela, (x_bola, y_bola), (x_bola + w_bola, y_bola + h_bola), (0, 255, 0), 0)
+
+            tela = cv2.putText(tela,str("bola"),(x_bola+40,y_bola-15),fonte,0.8,(255,255,0),2,cv2.LINE_AA)
+            grade[y_bola//10][x_bola//10][0] = 255 #seta o primeiro valor de cor do pixel #colocar mais certinho isso
  
-    for cnt in contornos:
+    for cnt in contornos_aliados:
         #Cálculo da área e remoção de elementos pequenos
         area = cv2.contourArea(cnt)
-        if(area_azul*(1-tolerancia) <= area <= area_azul*(1+tolerancia)):
+        if (area_ret_time*(1-tolerancia) <= area <= area_ret_time*(1+tolerancia)):
 
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
             x, y, w, h = cv2.boundingRect(cnt)
             cv2.rectangle(tela, (x, y), (x + w, y + h), (255, 0, 0), 0)
-            np.append(deteccoes,[x,y,w,h])
 
             centrado = centro(x,y,w,h)
             grade[int(centrado[1]//escala_grade)][int(centrado[0]//escala_grade)][0] = 150 #seta o primeiro valor de cor do pixel
 
-            hsvNum = hsv[max(y-tamanho_aumentar,0) : min(y+h+tamanho_aumentar,altura_tela),  max(x-tamanho_aumentar,0) : min(x+w+tamanho_aumentar,largura_tela)] #clampa
+            roi = hsv[max(y-tamanho_aumentar,0) : min(y+h+tamanho_aumentar,altura_tela),  max(x-tamanho_aumentar,0) : min(x+w+tamanho_aumentar,largura_tela)] #clampa
 
             # detecção do num no time
-            cv2.imshow("usada", hsvNum)#Exibe a filmagem("tela") do vídeo
+            cv2.imshow("roi", roi) #Exibe a filmagem("roi") do vídeo
 
             numeroNoTime = 0
 
-            maskDir = cv2.inRange(hsv,verde_min,verde_max)
-            _, maskDir = cv2.threshold(maskDir, 254, 255, cv2.THRESH_BINARY)
-            contornoDir, _ =  cv2.findContours(maskDir, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            
-                    
-            for cnt in contornoDir:
+            #usar usada/roi aqui em vez de hsv?
+            mascara_IDs   = cv2.inRange(hsv, verde_min,verde_max) # tem que fazer isso ser variável (por jogador, por conjunto de cores)
+            _, mascara_IDs  = cv2.threshold(mascara_IDs, 254, 255, cv2.THRESH_BINARY) #ver magic numbers
+            contornos_ID, _ = cv2.findContours(mascara_IDs, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+            for cnt in contornos_ID:
                 #Cálculo da área e remoção de elementos pequenos
                 area = cv2.contourArea(cnt)
 
                 if area > 100: #ver se usar a tolerância
                     cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
-                    xDir, yDir, wDir, hDir = cv2.boundingRect(cnt)
-                    #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3)
-                    cv2.rectangle(tela, (xDir, yDir), (xDir + wDir, yDir + hDir), (0, 0, 0), 0)
-                    np.append(deteccoes,[xDir,yDir,wDir,hDir])
-                    tela = cv2.putText(tela,str("Dir"),(xDir+40,yDir-15),fonte,0.8,(255,0,255),2,cv2.LINE_AA)
-                    '''direcao1x  = [(x+w//2),(y+h//2)] ; direcao1y = [(bola[0]+bola[2]//2),(bola[1]+bola[3]//2)]
-                    tela = cv2.arrowedLine(tela,direcao1x,direcao1y,[255,255,255],5)'''
+                    xID, yID, wID, hID = cv2.boundingRect(cnt)
 
-                    line = [(xDir+(wDir//2)),(yDir + (hDir//2)),(x+(w//2)),(y+(h//2))]
+                    cv2.rectangle(tela, (xID, yID), (xID + wID, yID + hID), (0, 0, 0), 0)
+
+                    tela = cv2.putText(tela,str("Dir"),(xID+40,yID-15),fonte,0.8,(255,0,255),2,cv2.LINE_AA)
+
+                    line = [(xID+(wID//2)),(yID + (hID//2)),(x+(w//2)),(y+(h//2))] #trocar isso por dois centrado() na linha seguinte
                     tela = cv2.arrowedLine(tela,(line[0],line[1]),(line[2],line[3]),(255,0,0),5)
 
-                    '''if y < (yDir - 5*y//100) and  x <= xDir <= x + w:
-                        #print("left")
-                        #print(bola[0])
-                        if 0 < bola[0] <= x:
-                            print("frente")
-                        elif 0 < (x + w) <= bola[0]:
-                            print("dar ré")
-                        elif 0 < bola[1] <= y:
-                            print("virar direita")
-                        elif 0 < (y+h) <= bola[1]:
-                            print("virar esquerda")
-                    elif y > (yDir - 5*y//100) and (x - (20*w//100)) <= xDir <= (x + (20*w//100)):
-                        #print("right")
-                        if 0 < bola[0] <= x:
-                            print("dar ré")
-                        elif 0 < (x+w) <= bola[0]:
-                            print("frente")
-                        elif 0 < bola[1] <= y:
-                            print("virar esquerda")
-                        elif 0 < (y+h) <= bola[1]:
-                            print("virar direita")
-                    elif x > (xDir -5*y//100) and y <= yDir <= y + h:
-                        #print("up")
-                        if 0 < bola[1] <= y:
-                            print("frente")
-                        elif 0 < (y+h) <= bola[1]:
-                            print("dar ré")
-                        elif 0 < bola[0] <= x:
-                            print("virar esquerda")
-                        elif 0 < (x+w) <= bola[0]:
-                            print("virar direita")
-                    elif x < (xDir -5*y//100) and (y - (20*h//100)) <= yDir <= (y + (20*h//100)):
-                        #print("down")
-                        if 0 < bola[1] <= y:
-                            print("dar ré")
-                        elif 0 < y <= bola[1]:
-                            print("frente")
-                        elif 0 < bola[0] <= x:
-                            print("virar esquerda")
-                        elif 0 < (x+w) <= bola[0]:
-                            print("virar direita")'''
+                    #aqui ficavam os if-elses de direção
 
-                
             tela = cv2.putText(tela,str(numeroNoTime+1),(x+40,y-15),fonte,0.8,(255,255,255),2,cv2.LINE_AA)
 
-    for cnt in contornosEnemy:
+    for cnt in contornos_oponentes:
         #Cálculo da área e remoção de elementos pequenos
         area = cv2.contourArea(cnt)
         
@@ -243,14 +195,11 @@ while True: # Loop de repetição para ret e frame do vídeo
             x, y, w, h = cv2.boundingRect(cnt)
             grade[y//10][x//10][0] = 80 #seta o primeiro valor de cor do pixel
 
-            #cv2.rectangle(tela, (x,y), (x +w, y +h), (0, 255, 0), 3) #debug? ver
             cv2.rectangle(tela, (x, y), (x + w, y + h), (0, 0, 255), 0)
-            np.append(deteccoes,[x,y,w,h])
             tela = cv2.putText(tela,str("enemy"),(x+40,y-15),fonte,0.8,(0,0,255),2,cv2.LINE_AA)
 
-    'print(deteccoes)'
-    cv2.imshow("blank", blank)
-    cv2.imshow("Mask", mask) #Exibe a máscara("Mask") do vídeo
+    cv2.imshow("blank", blank) #se mudar o nome aqui o menu ainda aparece, só que separado
+    cv2.imshow("mascara_aliados", mascara_aliados) #Exibe a máscara("mascara_aliados") do vídeo
     cv2.imshow("tela", tela) #Exibe a filmagem("tela") do vídeo
 
     cv2.imshow("grade", cv2.resize(grade,(0,0),fx=10,fy=10)) #Exibe a filmagem("grade") do vídeo
