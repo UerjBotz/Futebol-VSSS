@@ -12,15 +12,29 @@ def nothing (x): pass
 
 '''
 TODO:
-- deletar detecções e integrar o teste grade
-- deletar usada
-- passar pelo centro pro astar
-- tirar os ifs e deixar só o vetor que a gente descobriu como achar
-- adicionar outras cores e inserir no loop
-    - ajustar e pôr slider
-- ver regras
-    - ver regras de cor (/+quantidade)
-- ver membro do time
+- arrumação:
+    - deletar detecções
+    - deletar usada ou usar de verdade pra alguma coisa
+    - tirar os ifs e deixar só o vetor que a gente descobriu como achar **
+    - *
+- movimento:
+    - astar
+        - ver grade direitinho (+os outros obstáculos)
+        - passar pelo centro (ou como uma área)
+    - movimentos em geral (estratégia de jogo, etc.)
+    - integrar com a eletrônica (mandar movimentos via ESP)
+- geral:
+    - endireitar o vetor pra usar **
+    - vetor bola-robô
+    - adicionar outras cores e inserir no loop
+        - ajustar e pôr slider
+        - *fazer função/classe pra isso
+    - criar modos de jogo (plano: switch, argumentos de linha de comando)
+    - ver regras
+        - ver regras de cor (/+quantidade)
+    - ver membro do time e "personalidade"
+- propostas:
+    - colocar TO-DO em outro arquivo (ver)
 '''
 
 time = 0 # 0 para time azul, 1 para time amarelo
