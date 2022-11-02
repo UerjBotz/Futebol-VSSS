@@ -3,20 +3,31 @@ import numpy as np
 
 import movimento
 
-def centro (x, y, w, h):
-    return (x+w//2, y+h//2)
-
 blank = np.zeros((400,400))
 
 def nada (x): pass
+
+def centro (x, y, w, h):
+    return (x+w//2, y+h//2)
+
+def achar_contornos (tela, cor: tuple, *, janela_debug: str = "") : #TODO: parametrizar constantes cv2.etc)
+    cor_min, cor_max = cor
+
+    _, mascara = cv2.threshold(cv2.inRange(tela, cor_min, cor_max), 254, 255, cv2.THRESH_BINARY) # oqq são esses 254, 255? #ver magic numbers
+    contornos, _ = cv2.findContours(mascara, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE) 
+
+    if len(janela_debug): #TODO: ver se fazer assim mesmo
+        cv2.imshow(janela_debug, mascara) #Exibe um janela com a máscara
+
+    return contornos
 
 '''
 TODO:
 - arrumação:
     - deletar usada ou usar de verdade pra alguma coisa
     - classe pro menu (com inseridor e mostrador de trackbar, desligador de ui)
-    - fazer função getcontornos
     - *
+    - **
 - movimento:
     - astar
         - ver grade direitinho (+os outros obstáculos)
@@ -37,6 +48,9 @@ TODO:
 - propostas:
     - colocar TO-DO em outro arquivo (ver)
     - colocar menu de seleção de cores em outro módulo
+    - **fazer arquivo main e transformar reconhecimento em uma biblioteca
+    - classe janelas
+        - ***fazer funções pra escrever na tela e adicionar opção de desligar
 '''
 
 time = 0 # 0 para time azul, 1 para time amarelo
@@ -102,7 +116,7 @@ while True: # Loop de repetição para ret e frame do vídeo
     ret, frame = cap.read() # alterar "tela" para "frame" e utilizar a linha de baixo caso necessário diminuir a resolução da imagem
     tela = cv2.resize(frame,(0,0),fx=1,fy=1)
     # Extrair a região de interesse:
-    '''roi =  frame[x:x+?,y:y+?] # neste caso foi utilizada toda a imagem, mas pode ser alterado'''
+    '''roi = frame[x:x+?,y:y+?] # neste caso foi utilizada toda a imagem, mas pode ser alterado'''
     
     azul_min[0]    = cv2.getTrackbarPos('azul_min', 'blank')    ; azul_max[0]    = cv2.getTrackbarPos('azul_max', 'blank')
     amarelo_min[0] = cv2.getTrackbarPos('amarelo_min', 'blank') ; amarelo_max[0] = cv2.getTrackbarPos('amarelo_max', 'blank')
@@ -113,29 +127,16 @@ while True: # Loop de repetição para ret e frame do vídeo
     #1 Detecção dos jogadores e bola
     hsv = cv2.cvtColor(tela, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
 
-    mascara_aliados   = cv2.inRange(hsv, aliado_min, aliado_max) # máscara para detecção de um aliado
-    _, mascara_aliados   = cv2.threshold(mascara_aliados, 254, 255, cv2.THRESH_BINARY) #oqq são esses 254, 255? #ver magic numbers
-    contornos_aliados, _ = cv2.findContours(mascara_aliados, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE) 
-
-    #deixar essa parte de ID dentro do iterador de contorno_aliados
-    #mascara_IDs    = cv2.inRange(hsv,verde_min,verde_max) #ver se usar usada ou alguma coisa assim
-    #_, mascara_IDs   = cv2.threshold(mascara_IDs, 254, 255, cv2.THRESH_BINARY)
-    #contornos_ID, _ = cv2.findContours(mascara_IDs, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    mascara_bola    = cv2.inRange(hsv, bola_min,bola_max)
-    _, mascara_bola   = cv2.threshold(mascara_bola, 254, 255, cv2.THRESH_BINARY)
-    contornos_bola, _ = cv2.findContours(mascara_bola, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    mascara_oponentes    = cv2.inRange(hsv, oponente_min,oponente_max)
-    _, mascara_oponentes   = cv2.threshold(mascara_oponentes, 254, 255, cv2.THRESH_BINARY)
-    contornos_oponentes, _ = cv2.findContours(mascara_oponentes, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contornos_aliados = achar_contornos(hsv, (aliado_min,aliado_max), janela_debug="mascara_aliados")
+    contornos_bola    = achar_contornos(hsv, (bola_min,bola_max))
+    contornos_oponentes = achar_contornos(hsv, (oponente_min,oponente_max))
 
     for cnt in contornos_bola:
         #Cálculo da área e remoção de elementos pequenos
         area = cv2.contourArea(cnt)
 
         if area > 100: # ver se usar a tolerância
-            cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
+            cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0) #ver magic numbers
             x_bola, y_bola, w_bola, h_bola = cv2.boundingRect(cnt)
 
             cv2.rectangle(tela, (x_bola, y_bola), (x_bola + w_bola, y_bola + h_bola), (0, 255, 0), 0)
@@ -148,7 +149,7 @@ while True: # Loop de repetição para ret e frame do vídeo
         area = cv2.contourArea(cnt)
         if (area_ret_time*(1-tolerancia) <= area <= area_ret_time*(1+tolerancia)):
 
-            cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
+            cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0) #ver magic numbers
             x, y, w, h = cv2.boundingRect(cnt)
             cv2.rectangle(tela, (x, y), (x + w, y + h), (255, 0, 0), 0)
 
@@ -163,9 +164,8 @@ while True: # Loop de repetição para ret e frame do vídeo
             numeroNoTime = 0
 
             #usar usada/roi aqui em vez de hsv?
-            mascara_IDs   = cv2.inRange(hsv, verde_min,verde_max) # tem que fazer isso ser variável (por jogador, por conjunto de cores)
-            _, mascara_IDs  = cv2.threshold(mascara_IDs, 254, 255, cv2.THRESH_BINARY) #ver magic numbers
-            contornos_ID, _ = cv2.findContours(mascara_IDs, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            contornos_ID = achar_contornos(hsv, (verde_min,verde_max)) # tem que fazer isso ser variável (por jogador, por conjunto de cores)
+            # contornos_ID = achar_contornos(roi, (verde_min,verde_max)) # pra fazer assim precisa empurrar a posição pra perto do retâgulo de novo (ou talvez usar uma máscara)
 
             for cnt in contornos_ID:
                 #Cálculo da área e remoção de elementos pequenos
@@ -199,7 +199,7 @@ while True: # Loop de repetição para ret e frame do vídeo
             tela = cv2.putText(tela,str("enemy"),(x+40,y-15),fonte,0.8,(0,0,255),2,cv2.LINE_AA)
 
     cv2.imshow("blank", blank) #se mudar o nome aqui o menu ainda aparece, só que separado
-    cv2.imshow("mascara_aliados", mascara_aliados) #Exibe a máscara("mascara_aliados") do vídeo
+    #(ficava aqui mostrar a máscara dos aliados)
     cv2.imshow("tela", tela) #Exibe a filmagem("tela") do vídeo
 
     cv2.imshow("grade", cv2.resize(grade,(0,0),fx=10,fy=10)) #Exibe a filmagem("grade") do vídeo
