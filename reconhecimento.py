@@ -7,7 +7,7 @@ blank = np.zeros((400,400))
 
 def nada (x): pass
 
-def centro (x, y, w, h):
+def centro (x: int, y: int, w: int, h: int) -> tuple:
     return (x+w//2, y+h//2)
 
 def achar_contornos (tela, cor: tuple, *, janela_debug: str = "") : #TODO: parametrizar constantes cv2.etc)
@@ -20,6 +20,13 @@ def achar_contornos (tela, cor: tuple, *, janela_debug: str = "") : #TODO: param
         cv2.imshow(janela_debug, mascara) #Exibe um janela com a máscara
 
     return contornos
+
+class objeto_movel :
+    __slots__ = ("x", "y", "w", "h", "dx", "dy")
+
+    def __init__(self, x=0, y=0, w=0, h=0) :
+        self.x = x; self.dx = 0; self.w = w
+        self.y = y; self.dy = 0; self.h = h
 
 '''
 TODO:
