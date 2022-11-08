@@ -1,5 +1,6 @@
-import cv2
+import cv2 #type: ignore
 import numpy as np
+from dataclasses import dataclass
 
 import movimento
 
@@ -21,12 +22,11 @@ def achar_contornos (tela, cor: tuple, *, janela_debug: str = "") : #TODO: param
 
     return contornos
 
+@dataclass(slots=True)
 class objeto_movel :
-    __slots__ = ("x", "y", "w", "h", "dx", "dy")
-
-    def __init__(self, x=0, y=0, w=0, h=0) :
-        self.x = x; self.dx = 0; self.w = w
-        self.y = y; self.dy = 0; self.h = h
+    x: int = 0; y: int = 0
+    w: int = 0; h: int = 0
+    dx:int = 0; dy:int = 0;
 
 '''
 TODO:
@@ -37,12 +37,12 @@ TODO:
     - **
 - movimento:
     - astar
-        - ver grade direitinho (+os outros obstáculos)
-        - passar pelo centro (ou como uma área)
+        - ver grade direitinho (mexer na função)
+        - passar como uma área
     - movimentos em geral (estratégia de jogo, etc.)
-    - integrar com a eletrônica (mandar movimentos via ESP)
+    - integrar com a eletrônica (colocar o código de serial no movimento.py)
 - geral:
-    - adicionar area_bola, com o tamanho esperado em pixels
+    - ajustar area_bola, com o tamanho esperado certo em pixels
     - endireitar o vetor pra usar
     - vetor bola-robô
     - adicionar outras cores e inserir no loop
@@ -71,6 +71,11 @@ altura_tela  = int(cap.get(4))
 escala_grade = 10 #quase não usada no código. problemas.
 grade = np.zeros([altura_tela//10, largura_tela//10,3]) #inicializar grade pro a*
 
+def ocupar_grade (grade, x:int,y:int,w:int,h:int, cor=100) -> None:
+    #TODO: ocupar mais quadrados da grade pra cada obj
+    centrado = centro(x,y,w,h)
+    grade[int(centrado[1]//escala_grade)][int(centrado[0]//escala_grade)][0] = cor #seta o primeiro valor de cor do pixel
+
 #cores (alterar de acordo com a cor utilizada no robo fisico)
               #times 
 azul_min = np.array([100, 80, 80]) 
@@ -98,6 +103,8 @@ distancia = 300 # em milimetros
 area_ret_time = 18000*(100**2)/(distancia**2) # formula(d) = (areapixelsmedida*distanciamedida^2)/(d)^2
 area_roi_robo = area_ret_time*(7412/1200) #multiplica a "azul" pela proporção entre os retângulos pra achar o robo inteiro
 area_ret_ID   = area_ret_time*(280/1200) # multiplica a "azul" pela proporção entre os retângulos pra achar a "rosa"
+
+area_bola = area_ret_time*(280/1200) # mudar pro valor de verdade da bola
 
 tamanho_aumentar = int((area_roi_robo**(1/2))/2)
 tolerancia = 50/100
@@ -135,21 +142,22 @@ while True: # Loop de repetição para ret e frame do vídeo
     hsv = cv2.cvtColor(tela, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
 
     contornos_aliados = achar_contornos(hsv, (aliado_min,aliado_max), janela_debug="mascara_aliados")
-    contornos_bola    = achar_contornos(hsv, (bola_min,bola_max))
+    contornos_bola    = achar_contornos(hsv, (bola_min,bola_max))#, janela_debug="mascara_bola")
     contornos_oponentes = achar_contornos(hsv, (oponente_min,oponente_max))
 
     for cnt in contornos_bola:
         #Cálculo da área e remoção de elementos pequenos
         area = cv2.contourArea(cnt)
 
-        if area > 100: # ver se usar a tolerância
+        if area > 100: # ver se a tolerância funciona com a bola de verdade
+        # if (area_bola*(1-tolerancia) <= area <= area_bola*(1+tolerancia)):
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0) #ver magic numbers
             x_bola, y_bola, w_bola, h_bola = cv2.boundingRect(cnt)
 
-            cv2.rectangle(tela, (x_bola, y_bola), (x_bola + w_bola, y_bola + h_bola), (0, 255, 0), 0)
+            ocupar_grade(grade, x_bola,y_bola,w_bola,h_bola, cor=255)
 
+            cv2.rectangle(tela, (x_bola, y_bola), (x_bola + w_bola, y_bola + h_bola), (0, 255, 0), 0)
             tela = cv2.putText(tela,str("bola"),(x_bola+40,y_bola-15),fonte,0.8,(255,255,0),2,cv2.LINE_AA)
-            grade[y_bola//10][x_bola//10][0] = 255 #seta o primeiro valor de cor do pixel #colocar mais certinho isso
  
     for cnt in contornos_aliados:
         #Cálculo da área e remoção de elementos pequenos
@@ -160,8 +168,8 @@ while True: # Loop de repetição para ret e frame do vídeo
             x, y, w, h = cv2.boundingRect(cnt)
             cv2.rectangle(tela, (x, y), (x + w, y + h), (255, 0, 0), 0)
 
-            centrado = centro(x,y,w,h)
-            grade[int(centrado[1]//escala_grade)][int(centrado[0]//escala_grade)][0] = 150 #seta o primeiro valor de cor do pixel
+            #TODO: usar dimensões do robô em vez de do retângulo
+            ocupar_grade(grade, x,y,w,h, cor=150)
 
             roi = hsv[max(y-tamanho_aumentar,0) : min(y+h+tamanho_aumentar,altura_tela),  max(x-tamanho_aumentar,0) : min(x+w+tamanho_aumentar,largura_tela)] #clampa
 
@@ -178,13 +186,14 @@ while True: # Loop de repetição para ret e frame do vídeo
                 #Cálculo da área e remoção de elementos pequenos
                 area = cv2.contourArea(cnt)
 
-                if area > 100: #ver se usar a tolerância
+                if area > 100: # ver se a tolerância funciona com o retângulo de verdade
+                # if (area_ret_ID*(1-tolerancia) <= area <= area_ret_ID*(1+tolerancia)):
                     cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
                     xID, yID, wID, hID = cv2.boundingRect(cnt)
 
                     cv2.rectangle(tela, (xID, yID), (xID + wID, yID + hID), (0, 0, 0), 0)
 
-                    tela = cv2.putText(tela,str("Dir"),(xID+40,yID-15),fonte,0.8,(255,0,255),2,cv2.LINE_AA)
+                    tela = cv2.putText(tela,str("id"),(xID+40,yID-15),fonte,0.8,(255,0,255),2,cv2.LINE_AA)
 
                     line = [(xID+(wID//2)),(yID + (hID//2)),(x+(w//2)),(y+(h//2))] #trocar isso por dois centrado() na linha seguinte
                     tela = cv2.arrowedLine(tela,(line[0],line[1]),(line[2],line[3]),(255,0,0),5)
@@ -197,13 +206,15 @@ while True: # Loop de repetição para ret e frame do vídeo
         #Cálculo da área e remoção de elementos pequenos
         area = cv2.contourArea(cnt)
         
-        if area > 100: #ver se usar a tolerância
+        if (area_ret_time*(1-tolerancia) <= area <= area_ret_time*(1+tolerancia)):
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
             x, y, w, h = cv2.boundingRect(cnt)
-            grade[y//10][x//10][0] = 80 #seta o primeiro valor de cor do pixel
+
+            #TODO: usar dimensões do robô em vez de do retângulo
+            ocupar_grade(grade, x,y,w,h, cor=80)
 
             cv2.rectangle(tela, (x, y), (x + w, y + h), (0, 0, 255), 0)
-            tela = cv2.putText(tela,str("enemy"),(x+40,y-15),fonte,0.8,(0,0,255),2,cv2.LINE_AA)
+            tela = cv2.putText(tela,str("oponente"),(x+40,y-15),fonte,0.8,(0,0,255),2,cv2.LINE_AA)
 
     cv2.imshow("blank", blank) #se mudar o nome aqui o menu ainda aparece, só que separado
     #(ficava aqui mostrar a máscara dos aliados)
