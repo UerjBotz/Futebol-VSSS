@@ -1,6 +1,7 @@
 import cv2 #type: ignore
 import numpy as np
 from dataclasses import dataclass
+from math import pi, cos, sin, asin # pra girar o vetor
 
 import movimento
 
@@ -8,7 +9,7 @@ blank = np.zeros((400,400))
 
 def nada (x): pass
 
-def centro (x: int, y: int, w: int, h: int) -> tuple:
+def centro (x: int, y: int, w: int, h: int) -> tuple[int,int]:
     return (x+w//2, y+h//2)
 
 def achar_contornos (tela, cor: tuple, *, janela_debug: str = "") : #TODO: parametrizar constantes cv2.etc)
@@ -23,7 +24,7 @@ def achar_contornos (tela, cor: tuple, *, janela_debug: str = "") : #TODO: param
     return contornos
 
 @dataclass(slots=True)
-class objeto_movel :
+class objeto_movel : #não usada
     x: int = 0; y: int = 0
     w: int = 0; h: int = 0
     dx:int = 0; dy:int = 0;
@@ -43,7 +44,7 @@ TODO:
     - integrar com a eletrônica (colocar o código de serial no movimento.py)
 - geral:
     - ajustar area_bola, com o tamanho esperado certo em pixels
-    - endireitar o vetor pra usar
+    - endireitar o vetor pra usar (em progresso)
     - vetor bola-robô
     - adicionar outras cores e inserir no loop
         - ajustar e pôr slider
@@ -109,6 +110,22 @@ area_bola = area_ret_time*(280/1200) # mudar pro valor de verdade da bola
 tamanho_aumentar = int((area_roi_robo**(1/2))/2)
 tolerancia = 50/100
 
+#vetor e dimensões do robô (mm)
+altura_robo = 74#altura do retangulo maior
+altura_id = 27  #altura do retângulo menor
+distancia_centros = 22 #largura da fita
+
+    #acha matriz de rotação #(teria como fazer menos conta aqui, mas como é só uma vez...)
+seno_angulo_vetor = (altura_robo/2 - altura_id/2)/distancia_centros
+
+while not (seno_angulo_vetor <=1) : # deixa entre -1 e 1 #(mudar)
+    seno_angulo_vetor -=1
+while not (seno_angulo_vetor >=-1) :
+    seno_angulo_vetor +=1
+
+angulo_vetor = pi/2 - asin(seno_angulo_vetor) #olhar isso do domínio
+matriz_correção = np.array([[cos(angulo_vetor), -sin(angulo_vetor)], [sin(angulo_vetor), cos(angulo_vetor)]])
+
 # menu interativo  # alterar primeiro valor que aparece para atualizar valores encontrados nas mascaras
 cv2.namedWindow("blank")
 cv2.createTrackbar("azul_min","blank",102,120,nada)  ; cv2.createTrackbar("azul_max","blank",110,120,nada)
@@ -149,8 +166,8 @@ while True: # Loop de repetição para ret e frame do vídeo
         #Cálculo da área e remoção de elementos pequenos
         area = cv2.contourArea(cnt)
 
-        if area > 100: # ver se a tolerância funciona com a bola de verdade
-        # if (area_bola*(1-tolerancia) <= area <= area_bola*(1+tolerancia)):
+        # if area > 100: # ver se a tolerância funciona com a bola de verdade
+        if (area_bola*(1-tolerancia) <= area <= area_bola*(1+tolerancia)):
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0) #ver magic numbers
             x_bola, y_bola, w_bola, h_bola = cv2.boundingRect(cnt)
 
@@ -160,8 +177,10 @@ while True: # Loop de repetição para ret e frame do vídeo
             tela = cv2.putText(tela,str("bola"),(x_bola+40,y_bola-15),fonte,0.8,(255,255,0),2,cv2.LINE_AA)
  
     for cnt in contornos_aliados:
-        #Cálculo da área e remoção de elementos pequenos
+
         area = cv2.contourArea(cnt)
+
+        #Filtra retângulos com área muito distante da esperada
         if (area_ret_time*(1-tolerancia) <= area <= area_ret_time*(1+tolerancia)):
 
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0) #ver magic numbers
@@ -173,7 +192,7 @@ while True: # Loop de repetição para ret e frame do vídeo
 
             roi = hsv[max(y-tamanho_aumentar,0) : min(y+h+tamanho_aumentar,altura_tela),  max(x-tamanho_aumentar,0) : min(x+w+tamanho_aumentar,largura_tela)] #clampa
 
-            # detecção do num no time
+            # detecção do num no time e direção do robô
             cv2.imshow("roi", roi) #Exibe a filmagem("roi") do vídeo
 
             numeroNoTime = 0
@@ -183,29 +202,38 @@ while True: # Loop de repetição para ret e frame do vídeo
             # contornos_ID = achar_contornos(roi, (verde_min,verde_max)) # pra fazer assim precisa empurrar a posição pra perto do retâgulo de novo (ou talvez usar uma máscara)
 
             for cnt in contornos_ID:
-                #Cálculo da área e remoção de elementos pequenos
+
                 area = cv2.contourArea(cnt)
 
-                if area > 100: # ver se a tolerância funciona com o retângulo de verdade
-                # if (area_ret_ID*(1-tolerancia) <= area <= area_ret_ID*(1+tolerancia)):
+                #Filtra retângulos com área muito distante da esperada
+                if (area_ret_ID*(1-tolerancia) <= area <= area_ret_ID*(1+tolerancia)):
                     cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
                     xID, yID, wID, hID = cv2.boundingRect(cnt)
 
                     cv2.rectangle(tela, (xID, yID), (xID + wID, yID + hID), (0, 0, 0), 0)
 
-                    tela = cv2.putText(tela,str("id"),(xID+40,yID-15),fonte,0.8,(255,0,255),2,cv2.LINE_AA)
+                    tela = cv2.putText(tela,str("id"),(xID,yID),fonte,0.8,(255,0,255),2,cv2.LINE_AA)
 
-                    line = [(xID+(wID//2)),(yID + (hID//2)),(x+(w//2)),(y+(h//2))] #trocar isso por dois centrado() na linha seguinte
-                    tela = cv2.arrowedLine(tela,(line[0],line[1]),(line[2],line[3]),(255,0,0),5)
+                    linha_dir = np.array([*centro(xID, yID, wID, hID), *centro(x,y,w,h)])
+                    tela = cv2.arrowedLine(tela, linha_dir[:2], linha_dir[2:], (255,0,0),5)
+
+                    #print(linha_dir)
+                    #print(str(linha_dir[0]-linha_dir[2])+", "+str(linha_dir[0]-linha_dir[2]))
+                    vetor_normalizado = np.subtract(linha_dir[:2], linha_dir[2:])
+                    #print(vetor_normalizado)
+                    vetor_dir = np.dot(matriz_correção, vetor_normalizado)
+                    #print(vetor_normalizado)
+                    tela = cv2.arrowedLine(tela, (yID,int(vetor_dir[1])+yID), (xID,int(vetor_dir[0])+xID), (240,100,0),5)
 
                     #aqui ficavam os if-elses de direção
 
             tela = cv2.putText(tela,str(numeroNoTime+1),(x+40,y-15),fonte,0.8,(255,255,255),2,cv2.LINE_AA)
 
     for cnt in contornos_oponentes:
-        #Cálculo da área e remoção de elementos pequenos
+
         area = cv2.contourArea(cnt)
         
+        #Filtra retângulos com área muito distante da esperada
         if (area_ret_time*(1-tolerancia) <= area <= area_ret_time*(1+tolerancia)):
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
             x, y, w, h = cv2.boundingRect(cnt)
