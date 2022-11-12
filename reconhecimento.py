@@ -3,8 +3,6 @@ import numpy as np
 from dataclasses import dataclass
 from math import pi, cos, sin, asin # pra girar o vetor
 
-import movimento
-
 def nada (x): pass
 
 def centro (x: int, y: int, w: int, h: int) -> tuple[int,int]:
