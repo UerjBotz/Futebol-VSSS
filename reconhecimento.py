@@ -9,11 +9,11 @@ def centro (x: int, y: int, w: int, h: int) -> tuple[int,int]:
     return (x+w//2, y+h//2)
 
 @dataclass(slots=True)
-class Cor ():
+class faixa :
     MIN: np.ndarray
     MAX: np.ndarray
 
-def achar_contornos (tela, cor: Cor, *, janela_debug: str = "") : #TODO: parametrizar constantes cv2.etc)
+def achar_contornos (tela, cor: faixa, *, janela_debug: str = "") : #TODO: parametrizar constantes cv2.etc)
     _, mascara = cv2.threshold(cv2.inRange(tela, cor.MIN, cor.MAX), 254, 255, cv2.THRESH_BINARY) # oqq são esses 254, 255? #ver magic numbers
     contornos, _ = cv2.findContours(mascara, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE) 
 
@@ -37,10 +37,10 @@ TODO:
     - **
 - movimento:
     - astar
-        - ver grade direitinho (mexer na função)
-        - passar como uma área
+        - ver grade direitinho (passar robôs por mais que o retângulo central)
+        - integrar no código
     - movimentos em geral (estratégia de jogo, etc.)
-    - integrar com a eletrônica (colocar o código de serial no movimento.py)
+    - começar a usar o código da comunicação
 - geral:
     - ajustar area_bola, com o tamanho esperado certo em pixels
     - endireitar o vetor pra usar (em progresso) #(percebi que o tamanho varia de acordo com a posição na tela, investigar)
@@ -71,14 +71,15 @@ altura_tela  = int(cap.get(4))
 escala_grade = 10 #quase não usada no código. problemas.
 grade = np.zeros([altura_tela//10, largura_tela//10,3]) #inicializar grade pro a*
 
-def ocupar_grade (grade, x:int,y:int,w:int,h:int, cor=100) -> None:
-    #TODO: ocupar mais quadrados da grade pra cada obj
-    centrado = centro(x,y,w,h)
-    grade[int(centrado[1]//escala_grade)][int(centrado[0]//escala_grade)][0] = cor #seta o primeiro valor de cor do pixel
+def ocupar_grade (grade: np.ndarray, x:int,y:int,w:int,h:int, cor=100) -> None:
+
+    x,y,w,h = tuple(int(i//escala_grade) for i in (x,y,w,h))
+    grade[y : y+h, x : x+w] = np.array([cor, 0, 0])
+
 
 #vetor e dimensões do robô (mm)
-altura_robo = 74#altura do retangulo maior
-altura_id = 27  #altura do retângulo menor
+altura_robo = 74 #altura do retangulo maior
+altura_id   = 27 #altura do retângulo menor
 distancia_centros = 22 #largura da fita
 
     #acha matriz de rotação #(teria como fazer menos conta aqui, mas como é só uma vez...)
@@ -108,17 +109,17 @@ tolerancia = 50/100
     #cores (alterar de acordo com a cor utilizada no robo fisico)
 ajuste_cor = 20
               #times 
-azul    = Cor(np.array([100, 80, 80]),np.array([110,255,255]))
-amarelo = Cor(np.array([26, 50, 50]), np.array([46,255,255]))
+azul    = faixa(np.array([100, 80, 80]),np.array([110,255,255]))
+amarelo = faixa(np.array([26, 50, 50]), np.array([46,255,255]))
               #ids (ajustar (nesses só o verde ok))
-verde = Cor(np.array([80, 50, 50]), np.array([90,255,255])) 
-roxo  = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
-ciano = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
-rosa  = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
-vermelho = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
+verde = faixa(np.array([80, 50, 50]), np.array([90,255,255])) 
+roxo  = faixa(np.array([80, 50, 50]), np.array([90,255,255]))
+ciano = faixa(np.array([80, 50, 50]), np.array([90,255,255]))
+rosa  = faixa(np.array([80, 50, 50]), np.array([90,255,255]))
+vermelho = faixa(np.array([80, 50, 50]), np.array([90,255,255]))
               #(bola)
-# cor_bola = Cor(np.array([ 0, 50, 50]), np.array([16,255,255]))
-cor_bola = Cor(np.array([ 4, 50, 50]), np.array([ 7,255,255]))
+# cor_bola = faixa(np.array([ 0, 50, 50]), np.array([16,255,255]))
+cor_bola = faixa(np.array([ 4, 50, 50]), np.array([ 7,255,255]))
 
 # menu interativo  # atualizar o valor na definição da cor se achar um melhor
 menu = np.zeros((1,400)); cv2.namedWindow("menu") #ver se com o '1' ainda funciona pra todo mundo (/ no windows)
@@ -182,7 +183,7 @@ while True: # Loop de repetição para ret e frame do vídeo
             #TODO: usar dimensões do robô em vez de do retângulo
             ocupar_grade(grade, x,y,w,h, cor=150)
 
-            roi = hsv[max(y-tamanho_aumentar,0) : min(y+h+tamanho_aumentar,altura_tela),  max(x-tamanho_aumentar,0) : min(x+w+tamanho_aumentar,largura_tela)] #clampa
+            roi = hsv[max(y-tamanho_aumentar,0) : min(y+h+tamanho_aumentar,altura_tela), max(x-tamanho_aumentar,0) : min(x+w+tamanho_aumentar,largura_tela)] #clampa
 
             # detecção do num no time e direção do robô
             cv2.imshow("roi", roi) #Exibe a filmagem("roi") do vídeo
@@ -240,7 +241,7 @@ while True: # Loop de repetição para ret e frame do vídeo
     #(ficava aqui mostrar a máscara dos aliados)
     cv2.imshow("tela", tela) #Exibe a filmagem("tela") do vídeo
 
-    #cv2.imshow("grade", cv2.resize(grade,(0,0),fx=10,fy=10)) #Exibe a filmagem("grade") do vídeo
+    cv2.imshow("grade", cv2.resize(grade,(0,0),fx=10,fy=10)) #Exibe a grade pro pathfinding 
     grade = np.zeros([altura_tela//10,largura_tela//10,3]) # reseta
 
     #cv2.imshow("usada",usada)#Exibe a filmagem("ROI") do vídeo
