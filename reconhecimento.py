@@ -12,15 +12,17 @@ def nada (x): pass
 def centro (x: int, y: int, w: int, h: int) -> tuple[int,int]:
     return (x+w//2, y+h//2)
 
-def achar_contornos (tela, cor: tuple, *, janela_debug: str = "") : #TODO: parametrizar constantes cv2.etc)
-    cor_min, cor_max = cor
+@dataclass(slots=True)
+class Cor ():
+    MIN: np.ndarray
+    MAX: np.ndarray
 
-    _, mascara = cv2.threshold(cv2.inRange(tela, cor_min, cor_max), 254, 255, cv2.THRESH_BINARY) # oqq são esses 254, 255? #ver magic numbers
+def achar_contornos (tela, cor: Cor, *, janela_debug: str = "") : #TODO: parametrizar constantes cv2.etc)
+    _, mascara = cv2.threshold(cv2.inRange(tela, cor.MIN, cor.MAX), 254, 255, cv2.THRESH_BINARY) # oqq são esses 254, 255? #ver magic numbers
     contornos, _ = cv2.findContours(mascara, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE) 
 
     if len(janela_debug): #TODO: ver se fazer assim mesmo
         cv2.imshow(janela_debug, mascara) #Exibe um janela com a máscara
-
     return contornos
 
 @dataclass(slots=True)
@@ -34,6 +36,7 @@ TODO:
 - arrumação:
     - deletar usada ou usar de verdade pra alguma coisa
     - classe pro menu (com inseridor e mostrador de trackbar, desligador de ui)
+    - função de posição do retângulo id (recebe uma parte da tela (+ cor?))
     - *
     - **
 - movimento:
@@ -44,7 +47,7 @@ TODO:
     - integrar com a eletrônica (colocar o código de serial no movimento.py)
 - geral:
     - ajustar area_bola, com o tamanho esperado certo em pixels
-    - endireitar o vetor pra usar (em progresso)
+    - endireitar o vetor pra usar (em progresso) #(percebi que o tamanho varia de acordo com a posição na tela, investigar)
     - vetor bola-robô
     - adicionar outras cores e inserir no loop
         - ajustar e pôr slider
@@ -79,24 +82,16 @@ def ocupar_grade (grade, x:int,y:int,w:int,h:int, cor=100) -> None:
 
 #cores (alterar de acordo com a cor utilizada no robo fisico)
               #times 
-azul_min = np.array([100, 80, 80]) 
-azul_max = np.array([110,255,255])  
-amarelo_min = np.array([26, 50, 50]) 
-amarelo_max = np.array([46,255,255])
-              #bola
-bola_min  = np.array([ 0, 50, 50]) 
-bola_max  = np.array([16,255,255])
-              #ids (ajustar)
-verde_min = np.array([80, 50, 50])
-verde_max = np.array([90,255,255]) #só ok até esse verde
-roxo_min  = np.array([80, 50, 50])
-roxo_max  = np.array([90,255,255])
-ciano_min = np.array([80, 50, 50])
-ciano_max = np.array([90,255,255])
-vermelho_min = np.array([80, 50, 50])
-vermelho_max = np.array([90,255,255])
-rosa_min = np.array([80, 50, 50])
-rosa_max = np.array([90,255,255])
+azul    = Cor(np.array([100, 80, 80]),np.array([110,255,255]))
+amarelo = Cor(np.array([26, 50, 50]), np.array([46,255,255]))
+              #ids (ajustar (nesses só o verde ok))
+verde = Cor(np.array([80, 50, 50]), np.array([90,255,255])) 
+roxo  = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
+ciano = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
+rosa  = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
+vermelho = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
+              #(bola)
+cor_bola = Cor(np.array([ 0, 50, 50]), np.array([16,255,255]))
 
 #thresholds:
 distancia = 300 # em milimetros
@@ -118,13 +113,14 @@ distancia_centros = 22 #largura da fita
     #acha matriz de rotação #(teria como fazer menos conta aqui, mas como é só uma vez...)
 seno_angulo_vetor = (altura_robo/2 - altura_id/2)/distancia_centros
 
-while not (seno_angulo_vetor <=1) : # deixa entre -1 e 1 #(mudar)
-    seno_angulo_vetor -=1
-while not (seno_angulo_vetor >=-1) :
-    seno_angulo_vetor +=1
+while not (seno_angulo_vetor <= 1) : seno_angulo_vetor -=1 # deixa entre -1 e 1 #(mudar)
+while not (seno_angulo_vetor >=-1) : seno_angulo_vetor +=1
 
 angulo_vetor = pi/2 - asin(seno_angulo_vetor) #olhar isso do domínio
-matriz_correção = np.array([[cos(angulo_vetor), -sin(angulo_vetor)], [sin(angulo_vetor), cos(angulo_vetor)]])
+matriz_correção = np.array([
+                           [cos(angulo_vetor), -sin(angulo_vetor)],
+                           [sin(angulo_vetor),  cos(angulo_vetor)]
+                           ])
 
 # menu interativo  # alterar primeiro valor que aparece para atualizar valores encontrados nas mascaras
 cv2.namedWindow("blank")
@@ -136,11 +132,9 @@ cv2.createTrackbar("distância","blank",200,3000,nada)
 
 # cor dos times
 if time == 0: 
-    aliado_min = azul_min ; oponente_min = amarelo_min
-    aliado_max = azul_max ; oponente_max = amarelo_max
+    cor_aliado = azul ; cor_oponente = amarelo
 else:
-    aliado_min = amarelo_min ; oponente_min = azul_min
-    aliado_max = amarelo_max ; oponente_max = azul_max
+    cor_aliado = amarelo ; cor_oponente = azul
 
 
 while True: # Loop de repetição para ret e frame do vídeo
@@ -149,18 +143,18 @@ while True: # Loop de repetição para ret e frame do vídeo
     # Extrair a região de interesse:
     '''roi = frame[x:x+?,y:y+?] # neste caso foi utilizada toda a imagem, mas pode ser alterado'''
     
-    azul_min[0]    = cv2.getTrackbarPos('azul_min', 'blank')    ; azul_max[0]    = cv2.getTrackbarPos('azul_max', 'blank')
-    amarelo_min[0] = cv2.getTrackbarPos('amarelo_min', 'blank') ; amarelo_max[0] = cv2.getTrackbarPos('amarelo_max', 'blank')
-    bola_min[0]    = cv2.getTrackbarPos('bola_min', 'blank')    ; bola_max[0]    = cv2.getTrackbarPos('bola_max', 'blank')
-    verde_min[0]   = cv2.getTrackbarPos('verde_min', 'blank')   ; verde_max[0]   = cv2.getTrackbarPos('verde_max', 'blank')
+    cor_bola.MIN[0] = cv2.getTrackbarPos('bola_min', 'blank')    ; cor_bola.MAX[0] = cv2.getTrackbarPos('bola_max', 'blank')
+    azul.MIN[0]     = cv2.getTrackbarPos('azul_min', 'blank')    ; azul.MAX[0]     = cv2.getTrackbarPos('azul_max', 'blank')
+    amarelo.MIN[0]  = cv2.getTrackbarPos('amarelo_min', 'blank') ; amarelo.MAX[0]  = cv2.getTrackbarPos('amarelo_max', 'blank')
+    verde.MIN[0]    = cv2.getTrackbarPos('verde_min', 'blank')   ; verde.MAX[0]    = cv2.getTrackbarPos('verde_max', 'blank')
     distancia = cv2.getTrackbarPos('distância','blank')
 
     #1 Detecção dos jogadores e bola
     hsv = cv2.cvtColor(tela, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
 
-    contornos_aliados = achar_contornos(hsv, (aliado_min,aliado_max), janela_debug="mascara_aliados")
-    contornos_bola    = achar_contornos(hsv, (bola_min,bola_max))#, janela_debug="mascara_bola")
-    contornos_oponentes = achar_contornos(hsv, (oponente_min,oponente_max))
+    contornos_aliados = achar_contornos(hsv, cor_aliado, janela_debug="mascara_aliados")
+    contornos_bola    = achar_contornos(hsv, cor_bola)#, janela_debug="mascara_bola")
+    contornos_oponentes = achar_contornos(hsv, cor_oponente)
 
     for cnt in contornos_bola:
         #Cálculo da área e remoção de elementos pequenos
@@ -198,7 +192,7 @@ while True: # Loop de repetição para ret e frame do vídeo
             numeroNoTime = 0
 
             #usar usada/roi aqui em vez de hsv?
-            contornos_ID = achar_contornos(hsv, (verde_min,verde_max)) # tem que fazer isso ser variável (por jogador, por conjunto de cores)
+            contornos_ID = achar_contornos(hsv, verde) # tem que fazer isso ser variável (por jogador, por conjunto de cores)
             # contornos_ID = achar_contornos(roi, (verde_min,verde_max)) # pra fazer assim precisa empurrar a posição pra perto do retâgulo de novo (ou talvez usar uma máscara)
 
             for cnt in contornos_ID:
@@ -218,7 +212,7 @@ while True: # Loop de repetição para ret e frame do vídeo
                     tela = cv2.arrowedLine(tela, linha_dir[:2], linha_dir[2:], (255,0,0),5)
 
                     #print(linha_dir)
-                    #print(str(linha_dir[0]-linha_dir[2])+", "+str(linha_dir[0]-linha_dir[2]))
+                    #print(f"{linha_dir[0]-linha_dir[2])}, {str(linha_dir[0]-linha_dir[2]}")
                     vetor_normalizado = np.subtract(linha_dir[:2], linha_dir[2:])
                     #print(vetor_normalizado)
                     vetor_dir = np.dot(matriz_correção, vetor_normalizado)
