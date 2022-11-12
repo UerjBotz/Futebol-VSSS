@@ -1,31 +1,11 @@
 import cv2 #type: ignore
 import numpy as np
-from dataclasses import dataclass
-from math import pi, cos, sin, asin # pra girar o vetor
 
-def nada (x): pass
+from reconhecimento import * #ver de usar o nome completo nesse, deixei assim só pra não ter que mexer
+from constantes import *
 
 def centro (x: int, y: int, w: int, h: int) -> tuple[int,int]:
     return (x+w//2, y+h//2)
-
-@dataclass(slots=True)
-class faixa :
-    MIN: np.ndarray
-    MAX: np.ndarray
-
-def achar_contornos (tela, cor: faixa, *, janela_debug: str = "") : #TODO: parametrizar constantes cv2.etc)
-    _, mascara = cv2.threshold(cv2.inRange(tela, cor.MIN, cor.MAX), 254, 255, cv2.THRESH_BINARY) # oqq são esses 254, 255? #ver magic numbers
-    contornos, _ = cv2.findContours(mascara, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE) 
-
-    if len(janela_debug): #TODO: ver se fazer assim mesmo
-        cv2.imshow(janela_debug, mascara) #Exibe um janela com a máscara
-    return contornos
-
-@dataclass(slots=True)
-class objeto_movel : #não usada
-    x: int = 0; y: int = 0
-    w: int = 0; h: int = 0
-    dx:int = 0; dy:int = 0;
 
 time = 0 # 0 para time azul, 1 para time amarelo
 cap = cv2.VideoCapture(0) # Camera (alterar numero caso camera esteja em outro valor)
@@ -35,7 +15,6 @@ fonte = cv2.FONT_HERSHEY_SIMPLEX
 largura_tela = int(cap.get(3))
 altura_tela  = int(cap.get(4))
 
-escala_grade = 10 #quase não usada no código. problemas.
 grade = np.zeros([altura_tela//10, largura_tela//10,3]) #inicializar grade pro a*
 
 def ocupar_grade (grade: np.ndarray, x:int,y:int,w:int,h:int, cor=100) -> None:
@@ -43,50 +22,6 @@ def ocupar_grade (grade: np.ndarray, x:int,y:int,w:int,h:int, cor=100) -> None:
     x,y,w,h = tuple(int(i//escala_grade) for i in (x,y,w,h))
     grade[y : y+h, x : x+w] = np.array([cor, 0, 0])
 
-
-#vetor e dimensões do robô (mm)
-altura_robo = 74 #altura do retangulo maior
-altura_id   = 27 #altura do retângulo menor
-distancia_centros = 22 #largura da fita
-
-    #acha matriz de rotação #(teria como fazer menos conta aqui, mas como é só uma vez...)
-seno_angulo_vetor = (altura_robo/2 - altura_id/2)/distancia_centros
-
-while not (seno_angulo_vetor <= 1) : seno_angulo_vetor -=1 # deixa entre -1 e 1 #(mudar)
-while not (seno_angulo_vetor >=-1) : seno_angulo_vetor +=1
-
-angulo_vetor = pi/2 - asin(seno_angulo_vetor) #olhar isso do domínio
-matriz_correção = np.array([
-                           [cos(angulo_vetor), -sin(angulo_vetor)],
-                           [sin(angulo_vetor),  cos(angulo_vetor)]
-                           ])
-
-#thresholds:
-distancia = 300 # em milimetros
-
-area_ret_time = 18000*(100**2)/(distancia**2) # formula(d) = (areapixelsmedida*distanciamedida^2)/(d)^2
-area_roi_robo = area_ret_time*(7412/1200) #multiplica a "azul" pela proporção entre os retângulos pra achar o robo inteiro
-area_ret_ID   = area_ret_time*(280/1200) # multiplica a "azul" pela proporção entre os retângulos pra achar a "rosa"
-
-area_bola = area_ret_time*(280/1200)*3/2 # mudar pro valor de verdade da bola
-
-tamanho_aumentar = int((area_roi_robo**(1/2))/2)
-tolerancia = 50/100
-
-    #cores (alterar de acordo com a cor utilizada no robo fisico)
-ajuste_cor = 20
-              #times 
-azul    = faixa(np.array([100, 80, 80]),np.array([110,255,255]))
-amarelo = faixa(np.array([26, 50, 50]), np.array([46,255,255]))
-              #ids (ajustar (nesses só o verde ok))
-verde = faixa(np.array([80, 50, 50]), np.array([90,255,255])) 
-roxo  = faixa(np.array([80, 50, 50]), np.array([90,255,255]))
-ciano = faixa(np.array([80, 50, 50]), np.array([90,255,255]))
-rosa  = faixa(np.array([80, 50, 50]), np.array([90,255,255]))
-vermelho = faixa(np.array([80, 50, 50]), np.array([90,255,255]))
-              #(bola)
-# cor_bola = faixa(np.array([ 0, 50, 50]), np.array([16,255,255]))
-cor_bola = faixa(np.array([ 4, 50, 50]), np.array([ 7,255,255]))
 
 # menu interativo  # atualizar o valor na definição da cor se achar um melhor
 menu = np.zeros((1,400)); cv2.namedWindow("menu") #ver se com o '1' ainda funciona pra todo mundo (/ no windows)
