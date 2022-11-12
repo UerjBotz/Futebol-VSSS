@@ -1,6 +1,7 @@
 from numpy import ndarray, array
-from dataclasses import dataclass
 from math import pi, cos, sin, asin # pra girar o vetor
+
+from dataclasses import dataclass
 
 @dataclass(slots=True)
 class faixa :
