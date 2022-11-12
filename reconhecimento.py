@@ -25,7 +25,7 @@ def achar_contornos (tela, cor: Cor, *, janela_debug: str = "") : #TODO: paramet
 class objeto_movel : #não usada
     x: int = 0; y: int = 0
     w: int = 0; h: int = 0
-    dx:int = 0; dy:int = 0;
+    dx:int = 0; dy:int = 0
 
 '''
 TODO:
