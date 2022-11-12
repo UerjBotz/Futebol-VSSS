@@ -1,12 +1,13 @@
 import serial #type: ignore
 import time
-import numpy as np
+
+from numpy import ndarray, zeros
 
 master: serial.Serial
-envio: np.ndarray = np.zeros(6)
+envio: ndarray = zeros(6)
 
-def converter (pacote: np.ndarray) -> str :
-	return str(pacote[0])+","+str(pacote[1])+","+str(pacote[2])+","+str(pacote[3])+","+str(pacote[4])+","+str(pacote[5])
+def converter (pacote: ndarray) -> str :
+	return f"{pacote[0]},{pacote[1]},{pacote[2]},{pacote[3]},{pacote[4]},{pacote[5]}"
 
 def começar (porta:str,baudrate:int) :
 	master = serial.Serial(porta,baudrate)
@@ -19,7 +20,7 @@ def rodar (girar:bool) :
 	else:
 		master.write("0,0,0,0,0,0".encode())
 
-def andar (motor_esq:int, motor_dir:int,*, robo:int=0) :
+def mover (motor_esq:int, motor_dir:int,*, robo:int=0) :
 	envio[robo*2] = motor_esq; envio[robo*2 +1] = motor_dir
 	master.write(converter(envio).encode())
 
