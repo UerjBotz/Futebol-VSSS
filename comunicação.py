@@ -1,17 +1,17 @@
 import serial #type: ignore
-import time
 
+from time import sleep
 from numpy import ndarray, zeros
 
 master: serial.Serial
 envio: ndarray = zeros(6)
 
 def converter (pacote: ndarray) -> str :
-	return f"{pacote[0]},{pacote[1]},{pacote[2]},{pacote[3]},{pacote[4]},{pacote[5]}"
+	return ",".join(pacote)
+	# return f"{pacote[0]},{pacote[1]},{pacote[2]},{pacote[3]},{pacote[4]},{pacote[5]}"
 
 def começar (porta:str,baudrate:int) :
-	master = serial.Serial(porta,baudrate)
-	time.sleep(3)
+	master = serial.Serial(porta,baudrate); sleep(3)
 	master.timeout = 3
 
 def rodar (girar:bool) :
