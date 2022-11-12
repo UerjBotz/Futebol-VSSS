@@ -5,8 +5,6 @@ from math import pi, cos, sin, asin # pra girar o vetor
 
 import movimento
 
-blank = np.zeros((400,400))
-
 def nada (x): pass
 
 def centro (x: int, y: int, w: int, h: int) -> tuple[int,int]:
@@ -80,31 +78,6 @@ def ocupar_grade (grade, x:int,y:int,w:int,h:int, cor=100) -> None:
     centrado = centro(x,y,w,h)
     grade[int(centrado[1]//escala_grade)][int(centrado[0]//escala_grade)][0] = cor #seta o primeiro valor de cor do pixel
 
-#cores (alterar de acordo com a cor utilizada no robo fisico)
-              #times 
-azul    = Cor(np.array([100, 80, 80]),np.array([110,255,255]))
-amarelo = Cor(np.array([26, 50, 50]), np.array([46,255,255]))
-              #ids (ajustar (nesses só o verde ok))
-verde = Cor(np.array([80, 50, 50]), np.array([90,255,255])) 
-roxo  = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
-ciano = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
-rosa  = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
-vermelho = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
-              #(bola)
-cor_bola = Cor(np.array([ 0, 50, 50]), np.array([16,255,255]))
-
-#thresholds:
-distancia = 300 # em milimetros
-
-area_ret_time = 18000*(100**2)/(distancia**2) # formula(d) = (areapixelsmedida*distanciamedida^2)/(d)^2
-area_roi_robo = area_ret_time*(7412/1200) #multiplica a "azul" pela proporção entre os retângulos pra achar o robo inteiro
-area_ret_ID   = area_ret_time*(280/1200) # multiplica a "azul" pela proporção entre os retângulos pra achar a "rosa"
-
-area_bola = area_ret_time*(280/1200) # mudar pro valor de verdade da bola
-
-tamanho_aumentar = int((area_roi_robo**(1/2))/2)
-tolerancia = 50/100
-
 #vetor e dimensões do robô (mm)
 altura_robo = 74#altura do retangulo maior
 altura_id = 27  #altura do retângulo menor
@@ -122,13 +95,41 @@ matriz_correção = np.array([
                            [sin(angulo_vetor),  cos(angulo_vetor)]
                            ])
 
-# menu interativo  # alterar primeiro valor que aparece para atualizar valores encontrados nas mascaras
-cv2.namedWindow("blank")
-cv2.createTrackbar("azul_min","blank",102,120,nada)  ; cv2.createTrackbar("azul_max","blank",110,120,nada)
-cv2.createTrackbar("amarelo_min","blank",24,40,nada) ; cv2.createTrackbar("amarelo_max","blank",34,40,nada)
-cv2.createTrackbar("bola_min","blank",10,30,nada)    ; cv2.createTrackbar("bola_max","blank",20,30,nada)
-cv2.createTrackbar("verde_min","blank",80,100,nada)  ; cv2.createTrackbar("verde_max","blank",90,100,nada) 
-cv2.createTrackbar("distância","blank",200,3000,nada)
+#thresholds:
+distancia = 300 # em milimetros
+
+area_ret_time = 18000*(100**2)/(distancia**2) # formula(d) = (areapixelsmedida*distanciamedida^2)/(d)^2
+area_roi_robo = area_ret_time*(7412/1200) #multiplica a "azul" pela proporção entre os retângulos pra achar o robo inteiro
+area_ret_ID   = area_ret_time*(280/1200) # multiplica a "azul" pela proporção entre os retângulos pra achar a "rosa"
+
+area_bola = area_ret_time*(280/1200)*3/2 # mudar pro valor de verdade da bola
+
+tamanho_aumentar = int((area_roi_robo**(1/2))/2)
+tolerancia = 50/100
+
+    #cores (alterar de acordo com a cor utilizada no robo fisico)
+ajuste_cor = 20
+              #times 
+azul    = Cor(np.array([100, 80, 80]),np.array([110,255,255]))
+amarelo = Cor(np.array([26, 50, 50]), np.array([46,255,255]))
+              #ids (ajustar (nesses só o verde ok))
+verde = Cor(np.array([80, 50, 50]), np.array([90,255,255])) 
+roxo  = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
+ciano = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
+rosa  = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
+vermelho = Cor(np.array([80, 50, 50]), np.array([90,255,255]))
+              #(bola)
+# cor_bola = Cor(np.array([ 0, 50, 50]), np.array([16,255,255]))
+cor_bola = Cor(np.array([ 4, 50, 50]), np.array([ 7,255,255]))
+
+# menu interativo  # atualizar o valor na definição da cor se achar um melhor
+menu = np.zeros((1,400)); cv2.namedWindow("menu") #ver se com o '1' ainda funciona pra todo mundo (/ no windows)
+
+cv2.createTrackbar("azul_min",   'menu',    azul.MIN[0],    azul.MIN[0] +ajuste_cor,nada) ; cv2.createTrackbar("azul_max",   'menu',    azul.MAX[0],    azul.MAX[0] +ajuste_cor,nada)
+cv2.createTrackbar("amarelo_min",'menu', amarelo.MIN[0], amarelo.MIN[0] +ajuste_cor,nada) ; cv2.createTrackbar("amarelo_max",'menu', amarelo.MAX[0], amarelo.MAX[0] +ajuste_cor,nada)
+cv2.createTrackbar("bola_min",   'menu',cor_bola.MIN[0],cor_bola.MIN[0] +ajuste_cor,nada) ; cv2.createTrackbar("bola_max",   'menu',cor_bola.MAX[0],cor_bola.MAX[0] +ajuste_cor,nada)
+cv2.createTrackbar("verde_min",  'menu',   verde.MIN[0],   verde.MIN[0] +ajuste_cor,nada) ; cv2.createTrackbar("verde_max",  'menu',   verde.MAX[0],   verde.MAX[0] +ajuste_cor,nada) 
+cv2.createTrackbar("distância",'menu',200,3000,nada) #acho que essa não tá servindo de nada pq a gente usa antes de poder mexer
 
 # cor dos times
 if time == 0: 
@@ -143,16 +144,16 @@ while True: # Loop de repetição para ret e frame do vídeo
     # Extrair a região de interesse:
     '''roi = frame[x:x+?,y:y+?] # neste caso foi utilizada toda a imagem, mas pode ser alterado'''
     
-    cor_bola.MIN[0] = cv2.getTrackbarPos('bola_min', 'blank')    ; cor_bola.MAX[0] = cv2.getTrackbarPos('bola_max', 'blank')
-    azul.MIN[0]     = cv2.getTrackbarPos('azul_min', 'blank')    ; azul.MAX[0]     = cv2.getTrackbarPos('azul_max', 'blank')
-    amarelo.MIN[0]  = cv2.getTrackbarPos('amarelo_min', 'blank') ; amarelo.MAX[0]  = cv2.getTrackbarPos('amarelo_max', 'blank')
-    verde.MIN[0]    = cv2.getTrackbarPos('verde_min', 'blank')   ; verde.MAX[0]    = cv2.getTrackbarPos('verde_max', 'blank')
-    distancia = cv2.getTrackbarPos('distância','blank')
+    cor_bola.MIN[0] = cv2.getTrackbarPos('bola_min',   'menu') ; cor_bola.MAX[0] = cv2.getTrackbarPos('bola_max',   'menu')
+    azul.MIN[0]     = cv2.getTrackbarPos('azul_min',   'menu') ; azul.MAX[0]     = cv2.getTrackbarPos('azul_max',   'menu')
+    amarelo.MIN[0]  = cv2.getTrackbarPos('amarelo_min','menu') ; amarelo.MAX[0]  = cv2.getTrackbarPos('amarelo_max','menu')
+    verde.MIN[0]    = cv2.getTrackbarPos('verde_min',  'menu') ; verde.MAX[0]    = cv2.getTrackbarPos('verde_max',  'menu')
+    distancia = cv2.getTrackbarPos('distância','menu')
 
     #1 Detecção dos jogadores e bola
     hsv = cv2.cvtColor(tela, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
 
-    contornos_aliados = achar_contornos(hsv, cor_aliado, janela_debug="mascara_aliados")
+    contornos_aliados = achar_contornos(hsv, cor_aliado)#, janela_debug="mascara_aliados")
     contornos_bola    = achar_contornos(hsv, cor_bola)#, janela_debug="mascara_bola")
     contornos_oponentes = achar_contornos(hsv, cor_oponente)
 
@@ -160,8 +161,7 @@ while True: # Loop de repetição para ret e frame do vídeo
         #Cálculo da área e remoção de elementos pequenos
         area = cv2.contourArea(cnt)
 
-        # if area > 100: # ver se a tolerância funciona com a bola de verdade
-        if (area_bola*(1-tolerancia) <= area <= area_bola*(1+tolerancia)):
+        if (area_bola*(1-tolerancia) <= area <= area_bola*1+tolerancia):
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0) #ver magic numbers
             x_bola, y_bola, w_bola, h_bola = cv2.boundingRect(cnt)
 
@@ -238,11 +238,11 @@ while True: # Loop de repetição para ret e frame do vídeo
             cv2.rectangle(tela, (x, y), (x + w, y + h), (0, 0, 255), 0)
             tela = cv2.putText(tela,str("oponente"),(x+40,y-15),fonte,0.8,(0,0,255),2,cv2.LINE_AA)
 
-    cv2.imshow("blank", blank) #se mudar o nome aqui o menu ainda aparece, só que separado
+    cv2.imshow("menu", menu)
     #(ficava aqui mostrar a máscara dos aliados)
     cv2.imshow("tela", tela) #Exibe a filmagem("tela") do vídeo
 
-    cv2.imshow("grade", cv2.resize(grade,(0,0),fx=10,fy=10)) #Exibe a filmagem("grade") do vídeo
+    #cv2.imshow("grade", cv2.resize(grade,(0,0),fx=10,fy=10)) #Exibe a filmagem("grade") do vídeo
     grade = np.zeros([altura_tela//10,largura_tela//10,3]) # reseta
 
     #cv2.imshow("usada",usada)#Exibe a filmagem("ROI") do vídeo
