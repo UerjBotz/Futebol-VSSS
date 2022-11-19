@@ -11,7 +11,6 @@
     - começar a usar o código da comunicação
 - geral:
     - ajustar area_bola, com o tamanho esperado certo em pixels
-    - endireitar o vetor pra usar (em progresso) #(percebi que o tamanho varia de acordo com a posição na tela, investigar)
     - vetor bola-robô
     - adicionar outras cores e inserir no loop
         - ajustar e pôr slider
