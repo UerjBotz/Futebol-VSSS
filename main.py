@@ -1,4 +1,4 @@
-import cv2 #type: ignore
+import cv2 
 import numpy as np
 
 from reconhecimento import * #ver de usar o nome completo nesse, deixei assim só pra não ter que mexer
@@ -8,6 +8,7 @@ def centro (x: int, y: int, w: int, h: int) -> tuple[int,int]:
     return (x+w//2, y+h//2)
 
 time = 0 # 0 para time azul, 1 para time amarelo
+
 cap = cv2.VideoCapture(0) # Camera (alterar numero caso camera esteja em outro valor)
 
 fonte = cv2.FONT_HERSHEY_SIMPLEX
@@ -33,7 +34,7 @@ cv2.createTrackbar("verde_min",  'menu',   verde.MIN[0],   verde.MIN[0] +ajuste_
 cv2.createTrackbar("distância",'menu',200,3000,nada) #acho que essa não tá servindo de nada pq a gente usa antes de poder mexer
 
 # cor dos times
-if time == 0: 
+if time == 0:
     cor_aliado = azul ; cor_oponente = amarelo
 else:
     cor_aliado = amarelo ; cor_oponente = azul
@@ -112,14 +113,21 @@ while True: # Loop de repetição para ret e frame do vídeo
                     linha_dir = np.array([*centro(xID, yID, wID, hID), *centro(x,y,w,h)])
                     tela = cv2.arrowedLine(tela, linha_dir[:2], linha_dir[2:], (255,0,0),5)
 
-                    #print(linha_dir)
-                    #print(f"{linha_dir[0]-linha_dir[2])}, {str(linha_dir[0]-linha_dir[2]}")
+                    #print(f"linha normal {linha_dir}")
                     vetor_normalizado = np.subtract(linha_dir[:2], linha_dir[2:])
-                    #print(vetor_normalizado)
-                    vetor_dir = np.dot(matriz_correção, vetor_normalizado)
-                    #print(vetor_normalizado)
-                    tela = cv2.arrowedLine(tela, (yID,int(vetor_dir[1])+yID), (xID,int(vetor_dir[0])+xID), (240,100,0),5)
+                    #print(f"vetor no zero: {vetor_normalizado}")
 
+                    vetor_dir = np.dot(matriz_correção, vetor_normalizado)
+                    #print(f"vetor girado: {vetor_dir}")
+
+                    centro_ret = centro(x, y, w, h) 
+                    #print(f"coordenadas ret: {centro_ret}")
+
+                    inicial, final = (centro_ret, (vetor_dir+centro_ret).astype(int))
+                    linha_desenhar = (inicial, final)
+                    #print(f"linha na tela: {linha_desenhar}\n")
+
+                    tela = cv2.arrowedLine(tela, *linha_desenhar, (240,100,0),5)
                     #aqui ficavam os if-elses de direção
 
             tela = cv2.putText(tela,str(numeroNoTime+1),(x+40,y-15),fonte,0.8,(255,255,255),2,cv2.LINE_AA)
@@ -127,8 +135,8 @@ while True: # Loop de repetição para ret e frame do vídeo
     for cnt in contornos_oponentes:
 
         area = cv2.contourArea(cnt)
-        
-        #Filtra retângulos com área muito distante da esperada
+
+        #Filtra retân:gulos com área muito distante da esperada
         if (area_ret_time*(1-tolerancia) <= area <= area_ret_time*(1+tolerancia)):
             cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
             x, y, w, h = cv2.boundingRect(cnt)

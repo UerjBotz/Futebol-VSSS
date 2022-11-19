@@ -1,5 +1,5 @@
 from numpy import ndarray, array
-from math import pi, cos, sin, asin # pra girar o vetor
+from math import pi, cos, sin, atan # pra girar o vetor
 
 from dataclasses import dataclass
 
@@ -22,6 +22,21 @@ area_bola = area_ret_time*(280/1200)*3/2 # TODO: mudar pro valor de verdade da b
 tamanho_aumentar = int((area_roi_robo**(1/2))/2)
 tolerancia = 50/100
 
+#vetor e dimensões do robô (mm)
+altura_robo = 74 #altura do retangulo maior
+altura_id   = 27 #altura do retângulo menor
+distancia_centros = 22 #largura da fita
+
+    #acha matriz de rotação
+angulo_vetor = atan((altura_robo/2 - altura_id/2)/distancia_centros)
+# angulo_girar = -angulo_vetor
+angulo_girar = pi/2 + angulo_vetor
+
+matriz_correção = array([[cos(angulo_girar), -sin(angulo_girar)],
+                         [sin(angulo_girar),  cos(angulo_girar)]])
+# matriz_correção = np.array([[0,1], [-1,0]]) #90º
+print(matriz_correção)
+
 #    cores (alterar de acordo com a cor utilizada no robo fisico)
 ajuste_cor = 20
 #             times 
@@ -36,24 +51,5 @@ vermelho = faixa(array([ 80, 50, 50]), array([ 90,255,255]))
 #             (bola)
 # cor_bola = faixa(array([ 0, 50, 50]), array([16,255,255]))
 cor_bola = faixa(array([ 4, 50, 50]), array([ 7,255,255]))
-
-
-#vetor e dimensões do robô (mm)
-altura_robo = 74 #altura do retangulo maior
-altura_id   = 27 #altura do retângulo menor
-distancia_centros = 22 #largura da fita
-
-    #acha matriz de rotação #(teria como fazer menos conta aqui, mas como é só uma vez...)
-seno_angulo_vetor = (altura_robo/2 - altura_id/2)/distancia_centros
-
-while not (seno_angulo_vetor <= 1) : seno_angulo_vetor -=1 # deixa entre -1 e 1 #(mudar)
-while not (seno_angulo_vetor >=-1) : seno_angulo_vetor +=1
-
-angulo_vetor = pi/2 - asin(seno_angulo_vetor) #olhar isso do domínio
-matriz_correção = array([
-                        [cos(angulo_vetor), -sin(angulo_vetor)],
-                        [sin(angulo_vetor),  cos(angulo_vetor)]
-                        ])
-
 
 escala_grade = 10 #TODO: usar na hora de criar a grade
