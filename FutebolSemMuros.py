@@ -1,49 +1,117 @@
 import cv2
 import numpy as np
-from pyserialF import serialStart, serialRotate, serialClose #############################
+from detector import find, global_orientation
 
-Serial = serialStart('COM5',115200)  ###########################
+#from pyserialF import serialStart, serialRotate, serialClose #############################
+#Serial = serialStart('COM5',115200)  ###########################
 
-cap = cv2.VideoCapture(0) # Camera (alterar numero caso camera esteja em outro valor)
 fonte = cv2.FONT_HERSHEY_SIMPLEX
+
+# ====================  Camera e tela  ======================= #
+cap = cv2.VideoCapture(0) # Camera (alterar numero caso camera esteja em outro valor) #shape: (480, 640, 3)
+#cap = cv2.VideoCapture("http://192.168.43.195:81/stream",cv2.CAP_FFMPEG) # camera ip
 largura_tela = int(cap.get(3))
 altura_tela  = int(cap.get(4))
-bola_min  = np.array([ 0, 50, 50]) 
-bola_max  = np.array([16,255,255])
+
+# ====================  Intervalos de cores  ======================= #
+
+#bola_th_min  = np.array([ 0,  30, 210]) #np.array([ 0, 50, 50]) 
+#bola_th_max  = np.array([25, 210, 255]) #np.array([16,255,255])
+
+bola_th_min  = np.array([ 0, 150, 200]) #np.array([ 0, 50, 50]) 
+bola_th_max  = np.array([20, 230, 255]) #np.array([16,255,255])
+
+azul_th_min  = np.array([100, 100, 100]) #np.array([ 0, 50, 50])
+azul_th_max  = np.array([110, 220, 255]) #np.array([16,255,255])
+
+#verde_th_min  = np.array([75, 100, 100]) #np.array([ 0, 50, 50])
+#verde_th_max  = np.array([85, 220, 255]) #np.array([16,255,255])
+#verde_th_min  = np.array([65, 100,  50]) #np.array([ 0, 50, 50])
+#verde_th_max  = np.array([85, 250, 255]) #np.array([16,255,255])
+
+verde_th_min  = np.array([90, 150,  50]) #np.array([ 0, 50, 50])
+verde_th_max  = np.array([100, 230, 255]) #np.array([16,255,255])
+
+
+# ====================  outras variaveis  ======================= #
+
 girar = False
+PRINT_S = True
+batata = 0
 
-while True: # Loop de repetição para ret e frame do vídeo
-    ret, frame = cap.read() # alterar "tela" para "frame" e utilizar a linha de baixo caso necessário diminuir a resolução da imagem
+# ======================== LOOP =========================== #
+
+while True:
+    # ===== captura dos frames ===== #
+    ret, frame = cap.read()
     tela = cv2.resize(frame,(0,0),fx=1,fy=1)
-    # Extrair a região de interesse:
-    '''roi =  frame[x:x+?,y:y+?] # neste caso foi utilizada toda a imagem, mas pode ser alterado'''
+    tela_hsv = frame.copy()
+    #shape: (480, 640, 3)
+    
+    # ===== Transformação do espaço de cores e filtragem de ruido ===== #
+    tela_blur = cv2.GaussianBlur( tela, (7,7), cv2.BORDER_DEFAULT )
+    #cv2.imshow("tela_blur", tela_blur)
+    frame_hsv = cv2.cvtColor(tela_blur, cv2.COLOR_BGR2HSV)
+    cv2.imshow("HSV", frame_hsv)
 
-    #1 Detecção dos jogadores e bola
-    hsv = cv2.cvtColor(tela, cv2.COLOR_BGR2HSV) # A cores em HSV funcionam baseadas em hue, no caso do opencv, varia de 0 a 180º (diferente do padrão de 360º)
+    # ==== Detecção dos elementos por cor e area ==== #
+    find( frame_hsv, tela, bola_th_min, bola_th_max, tag = "bola", type="max" )
+    cnt_azul = find( frame_hsv, tela, azul_th_min, azul_th_max, tag = "azul" )
+    cnt_verde = find( frame_hsv, tela, verde_th_min, verde_th_max, tag = "verde" )
 
-    mascara_bola    = cv2.inRange(hsv, bola_min,bola_max)
-    _, mascara_bola   = cv2.threshold(mascara_bola, 254, 255, cv2.THRESH_BINARY)
-    contornos_bola, _ = cv2.findContours(mascara_bola, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    for cnt in contornos_bola:
-        #Cálculo da área e remoção de elementos pequenos
-        area = cv2.contourArea(cnt)
+    global_orientation( tela, cnt_azul, cnt_verde, type = "rect" )
 
-        if area > 100: # ver se usar a tolerância
+    h, s, b = cv2.split(frame_hsv)
+    #blank = np.zeros( frame_hsv.shape[:2], dtype='uint8' )
+    #cv2.imshow("h", h )
+    #cv2.imshow("s", s )
+    #cv2.imshow("b", b )
+    #cv2.imshow("H color", cv2.merge([h,blank,blank]) )
+    #cv2.imshow("S color", cv2.merge([blank,s,blank]) )
+    #cv2.imshow("B color", cv2.merge([blank,blank,b]) )
 
-            cv2.drawContours(tela, [cnt], -1, (0, 255, 0),0)
-            x_bola, y_bola, w_bola, h_bola = cv2.boundingRect(cnt)
-            cv2.rectangle(tela, (x_bola, y_bola), (x_bola + w_bola, y_bola + h_bola), (0, 255, 0), 0)
-            tela = cv2.putText(tela,str("bola"),(x_bola+40,y_bola-15),fonte,0.8,(255,255,0),2,cv2.LINE_AA)
-            girar = True
-            serialRotate(Serial,girar)
+    # ====== Captura da camera com as informações ===== #
+    cv2.imshow("tela", tela)
 
-        else:
-            girar = False
-            serialRotate(Serial,girar)
-
-    cv2.imshow("tela", tela) #Exibe a filmagem("tela") do vídeo
-    if cv2.waitKey(25) == ord('q'): break #tempo de exibição infinito (0) ou até se apertar a tecla q
+    # ====== Condição para encerramento ===== #
+    #tempo de exibição infinito (0) ou até se apertar a tecla q
+    if cv2.waitKey(25) == ord('q'): break
 
 cap.release()
 cv2.destroyAllWindows()
-serialClose(Serial)
+#serialClose(Serial)
+
+
+
+
+
+# Box azul: [[369 347]
+#  [395 322]
+#  [449 376]
+#  [424 402]]
+# Box azul: [[322 224]
+#  [376 186]
+#  [392 210]
+#  [338 247]]
+# Box verde: [[398 320]
+#  [423 295]
+#  [449 321]
+#  [424 346]]
+# Box verde: [[330 172]
+#  [356 154]
+#  [373 178]
+#  [348 197]]
+# p_ref: [array([[369, 347],
+#        [395, 322],
+#        [449, 376],
+#        [424, 402]], dtype=int64), array([[322, 224],
+#        [376, 186],
+#        [392, 210],
+#        [338, 247]], dtype=int64)]
+# p_2: [array([[398, 320],
+#        [423, 295],
+#        [449, 321],
+#        [424, 346]], dtype=int64), array([[330, 172],
+#        [356, 154],
+#        [373, 178],
+#        [348, 197]], dtype=int64)]
