@@ -1,5 +1,11 @@
-# Futebol para UERJ Sem Muros
+# Equipe Trevinho
+## Futebol VSSS
 
-Os códigos usados para a apresentação devem ser postos na mesma pasta, e executado o código principal "FutebolSemMuros.py"
+Aqui serão postos os códigos utilizados para o futebol de robôs VSSS (Very Small Size Soccer). Usem com moderação :)
 
-* Em construção ...
+## Neste codigo
+- Detecção dos robôs com filtragem de ruido.
+- Identificação de multiplas etiquetas.
+- Identificação da orientação global dos robôs. Posição e Direção.
+
+obs: sem a parte do codigo para comunicação com os bots
