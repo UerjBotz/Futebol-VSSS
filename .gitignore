@@ -1,2 +1,10 @@
 *.pyc
 *.ignore
+*.txt
+.*
+_*
+test*
+*.nix
+
+pyproject.toml
+poetry.lock
