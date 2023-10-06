@@ -3,6 +3,7 @@
 from warnings import warn
 import heapq
 
+B=1; G=2; L=0 #== BLOQUEADO, GOLEIRO, LIVRE
 
 class Node():
   """A node class for A* Pathfinding"""
@@ -19,9 +20,7 @@ class Node():
     return self.pos == other.pos
 
 
-def astar(matriz, inicial, final):
-  """Returns a list of tuples as a path from the given inicial to the given final in the given matriz"""
-
+def astar(matriz, inicial, final): #aceitar 
   # Create inicial and final node
   node_inicial = Node(None, inicial)
   node_inicial.g = node_inicial.h = node_inicial.f = 0

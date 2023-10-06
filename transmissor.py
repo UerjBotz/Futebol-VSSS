@@ -11,16 +11,15 @@ master.timeout = 3
 
 def converter(pacote: list[int]) -> str:
   return "Send 333, " + f"{pacote[0]},{pacote[1]},{pacote[2]},{pacote[3]},{pacote[4]},{pacote[5]}"
-  # return f"{pacote[0]},{pacote[1]},{pacote[2]},{pacote[3]},{pacote[4]},{pacote[5]}"
 
 
-def rodar(girar: bool):
-  if girar == True:
-    master.write("Send 333, -1000,1000,-1000,1000,-1000,1000".encode())
-  else:
-    master.write("Send 333, 0,0,0,0,0,0".encode())
+#def rodar(girar: bool):
+#  if girar == True:
+#    master.write("Send 333, -1000,1000,-1000,1000,-1000,1000".encode())
+#  else:
+#    master.write("Send 333, 0,0,0,0,0,0".encode())
 
-def mover(motor_esq: int, motor_dir: int, *, robo: int = 0):
+def mover(motor_esq: int, motor_dir: int, *, robo: int):
   envio[robo * 2] = motor_esq
   envio[robo * 2 + 1] = motor_dir
   master.write(converter(envio).encode())
