@@ -1,6 +1,6 @@
 import serial  #type: ignore
 
-from time import sleep
+from time import sleep, time
 from numpy import ndarray, zeros
 
 envio = [0, 0, 0, 0, 0, 0]
@@ -19,12 +19,13 @@ def converter(pacote: list[int]) -> str:
 #  else:
 #    master.write("Send 333, 0,0,0,0,0,0".encode())
 
-def mover(motor_esq: int, motor_dir: int, *, robo: int):
-  envio[robo * 2] = motor_esq
-  envio[robo * 2 + 1] = motor_dir
-  master.write(converter(envio).encode())
+def mover(motor_esq: int, motor_dir: int, *, robo: int, agora=False):
+  envio[robo*2] = motor_esq
+  envio[robo*2 + 1] = motor_dir
+  
+  if agora: enviar()
 
-def enviar(velocidades: list[int]):
+def enviar(velocidades: list[int] = envio):
   envio = velocidades
   master.write(converter(envio).encode())
 
