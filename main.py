@@ -1,6 +1,7 @@
-from time     import sleep
-from astar    import B, G, L, astar as planejar
+from time import sleep
+from astar import B, G, L, astar as planejar
 from receptor import Client
+from sys import argv
 
 from google.protobuf.json_format import MessageToDict
 
@@ -8,39 +9,53 @@ import transmissor
 import controle
 import numpy as np
 
+import ajogada as aj
+
+import pygame
+
+Estado = Enum('Estado', ['PARADO', 'NORMAL', 'BOLA_LIVRE_FAVOR', 'BOLA_LIVRE_CONTRA',  'TIRO_LIVRE_FAVOR', 'TIRO_LIVRE_CONTRA', 'PÊNALTI_FAVOR', 'PÊNALTI_CONTRA'])
+
+estado_atual = Estado.PARADO
 
 # CONSTANTES
 N_ROBÔS = 3
-FATOR_MATRIZ = 1/100
+FATOR_MATRIZ = 1 / 100
 VEL_MAX = 1000
 
 #GRADE_INICIAL = np.zeros((13, 17))
-GRADE_INICIAL = np.array([
-  [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
-  [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
-  [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
-  [B, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
-  [B, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
-  [G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, L],
-  [G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, L],
-  [G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, L],
-  [B, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
-  [B, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
-  [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
-  [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
-  [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B]
-])
+GRADE_INICIAL = np.array([[B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
+                          [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
+                          [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
+                          [B, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
+                          [B, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
+                          [G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, L],
+                          [G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, L],
+                          [G, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, L],
+                          [B, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
+                          [B, G, G, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
+                          [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
+                          [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
+                          [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B]])
+
+
+def acessa_dicio(dicio, chave, valor_padrão):
+  return dicio[chave] if chave in dicio else valor_padrão
+  
+def id (robô):
+  return acessa_dicio(robô, 'robotId', -1)
 
 def coordenadas(robô: dict):  #! usar info_campo/2 [...]?
   return (robô['x'] + 850, -(robô['y'] - 650))
 
 def posição_matriz(coord):
   x, y = coord
-  return int(x*FATOR_MATRIZ), int(y*FATOR_MATRIZ)
-  
+  return int(x * FATOR_MATRIZ), int(y * FATOR_MATRIZ)
+
+
 # def inserir_na_matriz(matriz: np.ndarray, entidade: dict):
 #   x, y = coordenadas(entidade)
 #   matriz[int(x*FATOR_MATRIZ), int(y*FATOR_MATRIZ)] = 1
+
 
 def atualiza_matriz(entidades: list[dict]):
   nova = GRADE_INICIAL.copy()
@@ -48,46 +63,75 @@ def atualiza_matriz(entidades: list[dict]):
     nova[posição_matriz(entidade)]
   return nova
 
-# GLOBAIS
-visão = Client(vision_ip = '224.5.23.2', vision_port = 10324)
-deve_parar = False
 
+# GLOBAIS
+visão = Client(vision_ip='224.5.23.2', vision_port=10324)
+deve_parar = False
+pygame.init() 
 info_campo = MessageToDict(visão.receive_frame().geometry)
 
-def main():
-  robôs_amarelos = robôs_azuis = [{"robot_id": 0, "x": 0, "y": 0}]
-  movedores = (controle.movedor(0),
-               controle.movedor(1),
-               controle.movedor(2))
+
+def main(argv: list[str]):
+  movedores = [controle.movedor(0), controle.movedor(1), controle.movedor(2)]
+  pids = [controle.inicializar_pid(800, kp=0.1, ki=0.2, kd=0.5) for i in range(3)]
   for m in movedores:
-    next(m); controle.avançar_um_bloco(VEL_MAX//3, m)
+    next(m)
+    controle.avançar_um_bloco(VEL_MAX // 3, m)
+
+  dicio_padrão = [{"robot_id": 0, "x": 0, "y": 0, "orientation": 0}]
+  robôs_amarelos = dicio_padrão.copy(); robôs_azuis = dicio_padrão.copy()
+
+  posições = MessageToDict(visão.receive_frame().detection)
+  robôs_amarelos = acessa_dicio(posições, 'robotsYellow', robôs_amarelos)
+  robôs_azuis = acessa_dicio(posições, 'robotsBlue', robôs_azuis)
+
+  if argv[1] == 'y':
+    time = robôs_amarelos
+  elif argv[1] =='b':
+    time = robôs_azuis
+  else: exit(1)
   
-  global deve_parar
+  ids = [id(robô) for robô in time]
+  ids.sort()
+  
+  global deve_parar, estado_atual
   while not (deve_parar):
     try:
+      keys = pygame.key.get_pressed()
+      if keys[pygame.K_SPACE]:
+        estado_atual = Estado.PARADO
+      elif keys[pygame.K_ENTER]:
+        estado_atual = Estado.NORMAL
+
       posições = MessageToDict(visão.receive_frame().detection)
-      #print(posições)
-      robôs_amarelos = posições['robotsYellow'] if 'robotsYellow' in posições else robôs_amarelos
-      robôs_azuis = posições['robotsBlue'] if 'robotsBlue' in posições else robôs_azuis
 
-      robô = robôs_azuis[0]
-      pid0 = controle.inicializar_pid(800, kp=0.1, ki=0.2, kd=0.5)
-      vels0 = pid0((robô['x'], robô['y']), (400,400), robô['orientation'])
-      transmissor.enviar([*vels0]*3)
+      robôs_amarelos = acessa_dicio(posições, 'robotsYellow', robôs_amarelos)
+      robôs_azuis = acessa_dicio(posições, 'robotsBlue', robôs_azuis)
+      bola = acessa_dicio(posições, 'balls', {'x': 0, 'y': 0})
+      for robô in time:
+        if   estado_atual == Estado.PARADO:
+          vels = aj.parado()
+        elif estado_atual == Estado.NORMAL:
+          id_transmissor = ids.index(id(robô))
+          if id_transmissor == 0:
+            pos_alvo = aj.guardar_gol(coordenadas(robô), coordenadas(bola))
+          elif id_transmissor == 1:
+            pos_alvo = aj.defender(coordenadas(robô), coordenadas(bola))
+          else: # id_transmissor == 2:
+            pos_alvo = aj.seguir_a_bola(coordenadas(robô), coordenadas(bola), entrar_area=True)
+
+          vels = pids[id_transmissor](coordenadas(robô), pos_alvo, robô['orientation'])
+          transmissor.mover(*vels, robo=id_transmissor)
+
+      transmissor.enviar()
       print(f"robô: {robô['x']}, {robô['y']}, aplicando vel {vels0}")
+
       sleep(0.214)
-
-      #for robô in robôs_amarelos:
-      #  print(f"amarelo: {robô['x']}, {robô['y']}")
-      #for robô in robôs_azuis:
-      #  print(f"azul: {robô['x']}, {robô['y']}")
-
-      #transmissor.enviar([1000, 1000, 1000, 1000, 1000, 1000])
-      #transmissor.mover(vel_max, vel_max, robo=0)
 
     except KeyboardInterrupt:
       deve_parar = True
 
   transmissor.finalizar()
 
-main()
+
+main(argv)

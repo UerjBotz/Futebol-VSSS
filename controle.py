@@ -28,9 +28,12 @@ def movedor(robo: int, espera: float = 0, vels: tuple[int, int] = (0,0)):
   while True:
     if (time() - t_ini) < espera:
       transmissor.mover(*vels, robo=robo)
+      yield
     else:
+      espera = 0
       transmissor.mover(0, 0, robo=robo)
-    params = yield
+      
+    params = yield if espera == 0 else None
     if params is not None:
       t_ini = time()
       espera, vels = params
@@ -89,7 +92,7 @@ def inicializar_pid(vel_padrão, *, kp, ki, kd, EPSILON=0.1):
     vr = int(min(1023, max(v - dv, -1023)))
     vl = int(min(1023, max(v + dv, -1023)))
     vels = vl, vr
-    if distância(0, vels) < EPSILON:
+    if distância((0,0), vels) < EPSILON:
       return (0,0)
     else:
       return (vl, vr)
@@ -129,5 +132,3 @@ def simular(posição: pos, alvo: pos, orientação: float, *, EPSILON=0.1):
   plt.show()
 
 
-##teste
-simular((0, 0), (10, 7), 2)
