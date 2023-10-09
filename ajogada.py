@@ -1,7 +1,3 @@
-from enum import Enum
-
-
-
 clamp = lambda v, m, M: max(m, min(v, M))
 vec2i = tuple[int, int]
 

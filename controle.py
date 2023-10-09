@@ -33,7 +33,8 @@ def movedor(robo: int, espera: float = 0, vels: tuple[int, int] = (0,0)):
       espera = 0
       transmissor.mover(0, 0, robo=robo)
       
-    params = yield if espera == 0 else None
+    params = yield 
+    params = params if espera == 0 else None
     if params is not None:
       t_ini = time()
       espera, vels = params
@@ -66,9 +67,7 @@ def inicializar_pid(vel_padrão, *, kp, ki, kd, EPSILON=0.1):
           orientação: float,
           v=vel_padrão
           ) -> tuple[int, int]:
-    nonlocal I
-    nonlocal t_ant
-    nonlocal err_ang_ant
+    nonlocal I, t_ant, err_ang_ant
 
     x0, y0 = atual
     x1, y1 = alvo

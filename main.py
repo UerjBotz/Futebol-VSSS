@@ -1,6 +1,7 @@
 from time import sleep
 from astar import B, G, L, astar as planejar
 from receptor import Client
+from enum import Enum
 from sys import argv
 
 from google.protobuf.json_format import MessageToDict
