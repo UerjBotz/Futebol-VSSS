@@ -26,7 +26,7 @@ class pid:
     self.kp = kp
     self.ki = ki
     self.kd = kd
-    t_last = time();
+    t_last = time()
   pass
 
   def update(self, speed, x_act, y_act, theta_act, x_set, y_set):

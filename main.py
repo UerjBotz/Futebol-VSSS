@@ -7,6 +7,7 @@ from google.protobuf.json_format import MessageToDict
 
 import transmissor
 import controle
+import controle_luis
 import numpy as np
 
 import ajogada as aj
@@ -73,7 +74,8 @@ info_campo = MessageToDict(visão.receive_frame().geometry)
 
 def main(argv: list[str]):
   movedores = [controle.movedor(0), controle.movedor(1), controle.movedor(2)]
-  pids = [controle.inicializar_pid(800, kp=0.1, ki=0.2, kd=0.5) for i in range(3)]
+  vel_fixa = 600
+  pids = [controle_luis.pid(kp=0.1, ki=0.2, kd=0.5) for i in range(3)]
   for m in movedores:
     next(m)
     controle.avançar_um_bloco(VEL_MAX // 3, m)
@@ -110,8 +112,9 @@ def main(argv: list[str]):
       bola = acessa_dicio(posições, 'balls', {'x': 0, 'y': 0})
       for robô in time:
         if   estado_atual == Estado.PARADO:
+          id_transmissor = ids.index(id(robô))
           vels = aj.parado()
-        elif estado_atual == Estado.NORMAL:
+        else: #if estado_atual == Estado.NORMAL:
           id_transmissor = ids.index(id(robô))
           if id_transmissor == 0:
             pos_alvo = aj.guardar_gol(coordenadas(robô), coordenadas(bola))
@@ -119,13 +122,11 @@ def main(argv: list[str]):
             pos_alvo = aj.defender(coordenadas(robô), coordenadas(bola))
           else: # id_transmissor == 2:
             pos_alvo = aj.seguir_a_bola(coordenadas(robô), coordenadas(bola), entrar_area=True)
-
-          vels = pids[id_transmissor](coordenadas(robô), pos_alvo, robô['orientation'])
-          transmissor.mover(*vels, robo=id_transmissor)
+          vels = pids[id_transmissor].update(vel_fixa, *coordenadas(robô), robô['orientation'], *pos_alvo)
+        transmissor.mover(*vels, robo=id_transmissor)
+        print(f"robô: {robô['x']}, {robô['y']}, aplicando vel {vels0}")
 
       transmissor.enviar()
-      print(f"robô: {robô['x']}, {robô['y']}, aplicando vel {vels0}")
-
       sleep(0.214)
 
     except KeyboardInterrupt:
