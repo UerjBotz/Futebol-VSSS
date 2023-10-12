@@ -41,6 +41,10 @@ class pid:
     v_set = x_set + 1j * y_set - x_act - 1j * y_act
     theta_set = polar(v_set)[1]
     theta_erro = theta_set - theta_act
+    d = polar(v_set)[0]
+    if d < 20:
+      print( f"[ dist {polar(v_set)[0]} {polar(v_set)[1]} ][ erro {theta_erro} ]" )
+      return (0,0)
 
     if (theta_erro > 0):
       theta_erro = theta_erro % pi
@@ -49,14 +53,16 @@ class pid:
 
     self.P = theta_erro * self.kp
     self.I += theta_erro * self.ki * dt
-    self.I = constrain(self.I, -300, 300)
+    self.I = constrain(self.I, -1000, 1000)
     self.D = (theta_erro - self.theta_erro_last) * self.kd * dt
     self.theta_erro_last = theta_erro
 
     dif = self.P + self.I + self.D
-
     vl = constrain(speed - dif, -1000, 1000)
     vr = constrain(speed + dif, -1000, 1000)
+
+    print( f"[ dist {polar(v_set)[0]} {polar(v_set)[1]} ][ erro {theta_erro} ]" )
+    
     return (vl, vr)
 
 
