@@ -2,7 +2,6 @@ from math import pi
 from time import time
 from math import sin, cos
 from cmath import polar, phase
-#import transmissor
 
 from stdUERJ import clamp as constrain
 

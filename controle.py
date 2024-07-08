@@ -2,7 +2,7 @@ from math import pi
 from time import time
 from math import sin, cos
 from cmath import polar, phase
-import transmissor
+import transmissor as tx
 
 _tam_eixo = 68.3  #mm
 _diâmetro_roda = 34.5  #mm
@@ -27,11 +27,11 @@ def movedor(robo: int, espera: float = 0, vels: tuple[int, int] = (0,0)):
   t_ini = time()
   while True:
     if (time() - t_ini) < espera:
-      transmissor.mover(*vels, robo=robo)
+      tx.mover(*vels, robo=robo)
       yield
     else:
       espera = 0
-      transmissor.mover(0, 0, robo=robo)
+      tx.mover(0, 0, robo=robo)
       
     params = yield 
     params = params if espera == 0 else None

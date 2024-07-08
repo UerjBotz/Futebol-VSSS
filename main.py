@@ -6,7 +6,7 @@ from sys import argv
 
 from google.protobuf.json_format import MessageToDict
 
-import transmissor
+import transmissor as tx
 import controle
 import controle_luis
 import numpy as np
@@ -113,27 +113,27 @@ def main(argv: list[str]):
       bola = acessa_dicio(posições, 'balls', {'x': 0, 'y': 0})
       for robô in time:
         if   estado_atual == Estado.PARADO:
-          id_transmissor = ids.index(id(robô))
+          id_tx = ids.index(id(robô))
           vels = aj.parado()
         else: #if estado_atual == Estado.NORMAL:
-          id_transmissor = ids.index(id(robô))
-          if id_transmissor == 0:
+          id_tx = ids.index(id(robô))
+          if   id_tx == 0:
             pos_alvo = aj.guardar_gol(coordenadas(robô), coordenadas(bola))
-          elif id_transmissor == 1:
+          elif id_tx == 1:
             pos_alvo = aj.defender(coordenadas(robô), coordenadas(bola))
-          else: # id_transmissor == 2:
+          else: # id_tx == 2:
             pos_alvo = aj.seguir_a_bola(coordenadas(robô), coordenadas(bola), entrar_area=True)
-          vels = pids[id_transmissor].update(vel_fixa, *coordenadas(robô), robô['orientation'], *pos_alvo)
-        transmissor.mover(*vels, robo=id_transmissor)
+          vels = pids[id_tx].update(vel_fixa, *coordenadas(robô), robô['orientation'], *pos_alvo)
+        tx.mover(*vels, robo=id_tx)
         print(f"robô: {robô['x']}, {robô['y']}, aplicando vel {vels0}")
 
-      transmissor.enviar()
+      tx.enviar()
       sleep(0.214)
 
     except KeyboardInterrupt:
       deve_parar = True
 
-  transmissor.finalizar()
+  tx.finalizar()
 
 
 main(argv)
