@@ -49,18 +49,18 @@ def atualiza_matriz(entidades: list[dict]):
   return nova
 
 # GLOBAIS
-visão = Client(vision_ip = '224.5.23.2', vision_port = 10324)
+visão = Client()
 deve_parar = False
 
 info_campo = MessageToDict(visão.receive_frame().geometry)
 
 def main():
   robôs_amarelos = robôs_azuis = [{"robot_id": 0, "x": 0, "y": 0}]
-  movedores = (controle.movedor(0),
-               controle.movedor(1),
-               controle.movedor(2))
-  for m in movedores:
-    next(m); controle.avançar_um_bloco(VEL_MAX//3, m)
+  #movedores = (controle.movedor(0),
+               #controle.movedor(1),
+               #controle.movedor(2))
+  #for m in movedores:
+    #next(m); controle.avançar_um_bloco(VEL_MAX//3, m)
   
   global deve_parar
   while not (deve_parar):
@@ -70,24 +70,11 @@ def main():
       robôs_amarelos = posições['robotsYellow'] if 'robotsYellow' in posições else robôs_amarelos
       robôs_azuis = posições['robotsBlue'] if 'robotsBlue' in posições else robôs_azuis
 
-      robô = robôs_azuis[0]
-      pid0 = controle.inicializar_pid(800, kp=0.1, ki=0.2, kd=0.5)
-      vels0 = pid0((robô['x'], robô['y']), (400,400), robô['orientation'])
-      transmissor.enviar([*vels0]*3)
-      print(f"robô: {robô['x']}, {robô['y']}, aplicando vel {vels0}")
-      sleep(0.214)
-
-      #for robô in robôs_amarelos:
-      #  print(f"amarelo: {robô['x']}, {robô['y']}")
-      #for robô in robôs_azuis:
-      #  print(f"azul: {robô['x']}, {robô['y']}")
-
-      #transmissor.enviar([1000, 1000, 1000, 1000, 1000, 1000])
-      #transmissor.mover(vel_max, vel_max, robo=0)
-
+      print(robôs_amarelos)
+      print(robôs_azuis)
     except KeyboardInterrupt:
       deve_parar = True
 
-  transmissor.finalizar()
+  #transmissor.finalizar()
 
 main()

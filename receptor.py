@@ -5,7 +5,7 @@ import wrapper_pb2 as wr
 
 
 class Client:
-  def __init__(self, vision_ip="224.5.23.2", vision_port=10015):
+  def __init__(self, vision_ip="224.0.0.1", vision_port=10002):
     """
         vision_ip : str
             Multicast Vision IP in format '255.255.255.255'. 
