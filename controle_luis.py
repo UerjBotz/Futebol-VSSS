@@ -4,12 +4,7 @@ from math import sin, cos
 from cmath import polar, phase
 #import transmissor
 
-
-def constrain(x, MIN, MAX):
-  if (x >= MAX): return MAX
-  if (x <= MIN): return MIN
-  return x
-
+from stdUERJ import clamp as constrain
 
 class pid:
 
@@ -91,3 +86,4 @@ def simular(x_set, y_set):
 
 
 #simular( 10, 50 );
+

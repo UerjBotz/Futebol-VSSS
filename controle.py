@@ -130,4 +130,3 @@ def simular(posição: pos, alvo: pos, orientação: float, *, EPSILON=0.1):
   plt.plot(xs, ys)
   plt.show()
 
-

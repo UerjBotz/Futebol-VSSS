@@ -1,5 +1,7 @@
-clamp = lambda v, m, M: max(m, min(v, M))
+from stdUERJ import clamp
+
 vec2i = tuple[int, int]
+
 
 def atacar(): pass
 

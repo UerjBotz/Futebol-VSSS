@@ -31,7 +31,7 @@ class Client:
     self.frame = None
     self.det_frame = None
 
-  def receive_frame(self):
+  def receive_frame(self) -> dict:
     """Receive package and decode."""
     data = None
     while True:
@@ -45,3 +45,13 @@ class Client:
 
     return None
     # return self.frame, self.det_frame
+
+
+#if __name__ == "__main__":
+#    from time import sleep
+#
+#    c = Client()
+#    for _ in range(20): 
+#        print(c.receive_frame())
+#        sleep(0.2)
+

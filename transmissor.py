@@ -25,10 +25,11 @@ def mover(motor_esq: int, motor_dir: int, *, robo: int, agora=False):
   
   if agora: enviar()
 
-def enviar(velocidades: list[int] = envio):
-  envio = velocidades
-  master.write(converter(envio).encode())
+def enviar(velocidades: list[int] = None):
+  env = envio if (v := velocidades) == None else v
+  master.write(converter(env).encode())
 
 def finalizar():
   enviar([0,0,0,0,0,0])
   master.close()
+
