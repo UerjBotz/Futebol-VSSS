@@ -15,7 +15,14 @@ import ajogada as aj
 
 import pygame
 
-Estado = Enum('Estado', ['PARADO', 'NORMAL', 'BOLA_LIVRE_FAVOR', 'BOLA_LIVRE_CONTRA',  'TIRO_LIVRE_FAVOR', 'TIRO_LIVRE_CONTRA', 'PÊNALTI_FAVOR', 'PÊNALTI_CONTRA'])
+Estado = Enum('Estado', ['PARADO',
+                         'NORMAL',
+                         'BOLA_LIVRE_FAVOR',
+                         'BOLA_LIVRE_CONTRA', 
+                         'TIRO_LIVRE_FAVOR',
+                         'TIRO_LIVRE_CONTRA',
+                         'PÊNALTI_FAVOR',
+                         'PÊNALTI_CONTRA'])
 
 estado_atual = Estado.PARADO
 
@@ -67,14 +74,17 @@ def atualiza_matriz(entidades: list[dict]):
 
 
 # GLOBAIS
-visão = Client(vision_ip='224.5.23.2', vision_port=10324)
+visão = Client(vision_ip='224.5.23.2', vision_port=10015)
 deve_parar = False
 pygame.init() 
 info_campo = MessageToDict(visão.receive_frame().geometry)
 
 
 def main(argv: list[str]):
-  movedores = [controle.movedor(0), controle.movedor(1), controle.movedor(2)]
+  movedores = [controle.movedor(0),
+               controle.movedor(1),
+               controle.movedor(2)]
+
   vel_fixa = 600
   pids = [controle_luis.pid(kp=0.1, ki=0.2, kd=0.5) for i in range(3)]
   for m in movedores:
@@ -86,11 +96,11 @@ def main(argv: list[str]):
 
   posições = MessageToDict(visão.receive_frame().detection)
   robôs_amarelos = acessa_dicio(posições, 'robotsYellow', robôs_amarelos)
-  robôs_azuis = acessa_dicio(posições, 'robotsBlue', robôs_azuis)
+  robôs_azuis    = acessa_dicio(posições, 'robotsBlue', robôs_azuis)
 
-  if argv[1] == 'y':
+  if   argv[1] == 'y': #! isso tem que tar dentro
     time = robôs_amarelos
-  elif argv[1] =='b':
+  elif argv[1] == 'b': #! isso tem que tar dentro
     time = robôs_azuis
   else: exit(1)
   
@@ -101,9 +111,9 @@ def main(argv: list[str]):
   while not (deve_parar):
     try:
       keys = pygame.key.get_pressed()
-      if keys[pygame.K_SPACE]:
+      if   keys[pygame.KSCAN_SPACE]:
         estado_atual = Estado.PARADO
-      elif keys[pygame.K_ENTER]:
+      elif keys[pygame.KSCAN_KP_ENTER]:
         estado_atual = Estado.NORMAL
 
       posições = MessageToDict(visão.receive_frame().detection)
@@ -125,7 +135,7 @@ def main(argv: list[str]):
             pos_alvo = aj.seguir_a_bola(coordenadas(robô), coordenadas(bola), entrar_area=True)
           vels = pids[id_transmissor].update(vel_fixa, *coordenadas(robô), robô['orientation'], *pos_alvo)
         transmissor.mover(*vels, robo=id_transmissor)
-        print(f"robô: {robô['x']}, {robô['y']}, aplicando vel {vels0}")
+        print(f"robô: {robô['x']}, {robô['y']}, aplicando vel {vels}")
 
       transmissor.enviar()
       sleep(0.214)

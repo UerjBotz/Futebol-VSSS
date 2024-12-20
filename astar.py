@@ -1,6 +1,5 @@
 # Credit for this: Nicholas Swift
 # as found at https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
-from warnings import warn
 import heapq
 
 B=1; G=2; L=0 #== BLOQUEADO, GOLEIRO, LIVRE

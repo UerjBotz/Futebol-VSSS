@@ -1,1 +1,3 @@
-- fazer
+- checar se precisa do protobuf instalado via pip
+- ver o que acontece com os robôs sendo filmados
+- []
