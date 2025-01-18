@@ -1,34 +1,34 @@
-import serial  #type: ignore
+from serial import Serial
+from time   import sleep, time
 
-from time import sleep, time
-from numpy import ndarray, zeros
+master = Serial("/dev/ttyUSB0", 115200)
+#! sleep(3) #! ver se precisa mesmo. muito esquisito...
+master.timeout = 3
 
 envio = [0, 0, 0, 0, 0, 0]
-master = serial.Serial("/dev/ttyUSB0", 115200)
-sleep(3)
-master.timeout = 3
 
 
 def converter(pacote: list[int]) -> str:
-  return "Send 333, " + f"{pacote[0]},{pacote[1]},{pacote[2]},{pacote[3]},{pacote[4]},{pacote[5]}"
-
-
-#def rodar(girar: bool):
-#  if girar == True:
-#    master.write("Send 333, -1000,1000,-1000,1000,-1000,1000".encode())
-#  else:
-#    master.write("Send 333, 0,0,0,0,0,0".encode())
+    msg = ','.join(map(str,pacote)) + '\n'
+    return msg.encode()
 
 def mover(motor_esq: int, motor_dir: int, *, robo: int, agora=False):
-  envio[robo*2] = motor_esq
-  envio[robo*2 + 1] = motor_dir
-  
-  if agora: enviar()
+    envio[robo*2] = motor_esq
+    envio[robo*2 + 1] = motor_dir
+    
+    if agora: enviar()
 
 def enviar(velocidades: list[int] = envio):
-  envio = velocidades
-  master.write(converter(envio).encode())
+    envio[:] = velocidades[:]
+    master.write(converter(envio))
 
 def finalizar():
-  enviar([0,0,0,0,0,0])
-  master.close()
+    enviar([0,0,0,0,0,0])
+    master.close()
+
+
+if __name__ == '__main__':
+    from sys import argv
+
+    enviar(tuple(map(int, argv[1:])))
+

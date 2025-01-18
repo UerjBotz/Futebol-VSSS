@@ -1,6 +1,7 @@
 *.pyc
 *.ignore
 *.txt
+*pb2.py
 .*
 _*
 test*
