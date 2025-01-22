@@ -9,7 +9,7 @@ envio = [0, 0, 0, 0, 0, 0]
 
 
 def converter(pacote: list[int]) -> str:
-    msg = ','.join(map(str,pacote)) + '\n'
+    msg = ' '.join(map(str,pacote)) + '\n'
     return msg.encode()
 
 def mover(motor_esq: int, motor_dir: int, *, robo: int, agora=False):

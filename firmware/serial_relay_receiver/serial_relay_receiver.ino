@@ -1,43 +1,47 @@
 #include <Arduino.h>
+#include "../comms.h"
 
-#ifdef ESP32
-    #include <WiFi.h>
-    #include <esp_now.h>
-#else
-    #include <ESP8266WiFi.h>
-    #include <esp_now.h>
-#endif
-
+#define ID 0 /*! mudar pra cada robô !*/
 #define BAUD_RATE 115200
 
-typedef struct packet {
-    uint8_t id;
-    uint8_t len;
-    char vels[25];
-} Packet;
+#define LEN(arr) (sizeof(arr)/sizeof(*arr))
 
-void init_wifi(wifi_mode_t mode=WIFI_STA) {
-    WiFi.mode(mode);
-    WiFi.STA.begin();
 
-    esp_err_t err = esp_now_init();
-    assert (err == ESP_OK);
+struct vel { uint16_t esq=0, dir=0; };
+union vels {
+    uint16_t raw[6];
+    struct vel at[3];
+};
+
+union vels convert_vel(char *const text, uint8_t len) {
+    uint8_t v = 1, seps[6] = {0};
+    for (int i = 0; (text[i] != '\0') && (i < len); i++) {
+        if (text[i] == ' ') seps[v++] = i;
+    }
+
+    union vels vels{0};
+    for (int i = 0; i < LEN(seps); i++) {
+        vels.raw[i] = atoi(&text[seps[i]]);
+    }
+    return vels;
 }
 
-uint8_t* get_mac_addr(wifi_interface_t interface=WIFI_IF_STA) {
-    static uint8_t mac_addr[6];
-    return WiFi.macAddress(mac_addr);
-}
-
-Packet msg;
+union vels vels{0};
 void on_recv(const uint8_t* mac, const uint8_t* data, int len) {
-    memcpy(&msg, data, sizeof(msg));
-
+    //! print
+    Packet* msg = (Packet*) (void*)data;
     Serial.print("Bytes received: "); Serial.println(len);
-    Serial.print("kind: "); Serial.println(msg.id);
-    Serial.print("len: ");  Serial.println(msg.len);
-    Serial.print("vels: "); Serial.println(msg.vels);
+    Serial.print("kind: "); Serial.println(msg->id);
+    Serial.print("len:  "); Serial.println(msg->len);
+    Serial.print("vels: "); Serial.println(msg->vels);
+    Serial.println();
 
+    //! print
+    vels = convert_vel(msg->vels, msg->len);
+    Serial.printf("robôs %d %d, %d %d, %d %d\n",
+                vels.at[0].esq, vels.at[0].dir,
+                vels.at[1].esq, vels.at[1].dir,
+                vels.at[2].esq, vels.at[2].dir);
     Serial.println();
 }
 
@@ -46,11 +50,14 @@ void setup() {
     uint8_t* mac_addr = get_mac_addr();
 
     Serial.begin(BAUD_RATE);
-    Serial.printf("%02x:%02x:%02x:%02x:%02x:%02x\n",
+    Serial.printf("MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
                   mac_addr[0], mac_addr[1], mac_addr[2],
                   mac_addr[3], mac_addr[4], mac_addr[5]);
+    Serial.printf("ID: %d", ID);
 
     esp_now_register_recv_cb(esp_now_recv_cb_t(on_recv));
 }
 
-void loop() {}
+void loop() {
+    //! setar velocidades dos motores
+}
