@@ -1,22 +1,30 @@
+#define VESPA /*! definir automático de alguma forma !*/
+
 #include <Arduino.h>
 #include "../comms.h"
+#include "../robot.h"
 
 #define ID 0 /*! mudar pra cada robô !*/
 #define BAUD_RATE 115200
 
+#define memeql(a,b,sz) (memcmp(a,b,sz) == 0)
 #define LEN(arr) (sizeof(arr)/sizeof(*arr))
 
-
-struct vel { uint16_t esq=0, dir=0; };
+struct vel { int16_t esq = 0, dir = 0; }; //! nomes
 union vels {
-    uint16_t raw[6];
-    struct vel at[3];
+    int16_t   raw[6];
+    struct vel of[3];
 };
 
-union vels convert_vel(char *const text, uint8_t len) {
+union vels str_to_vels(char *const text, uint8_t len) {
+    const char sep = ' ';
+ 
     uint8_t v = 1, seps[6] = {0};
-    for (int i = 0; (text[i] != '\0') && (i < len); i++) {
-        if (text[i] == ' ') seps[v++] = i;
+    for (int i = 0; i < len; i++) {
+        if (text[i] == sep) seps[v++] = i;
+
+        if (text[i] == '\0') break;
+        if (v  >= LEN(seps)) break;
     }
 
     union vels vels{0};
@@ -37,11 +45,11 @@ void on_recv(const uint8_t* mac, const uint8_t* data, int len) {
     Serial.println();
 
     //! print
-    vels = convert_vel(msg->vels, msg->len);
+    vels = str_to_vels(msg->vels, msg->len);
     Serial.printf("robôs %d %d, %d %d, %d %d\n",
-                vels.at[0].esq, vels.at[0].dir,
-                vels.at[1].esq, vels.at[1].dir,
-                vels.at[2].esq, vels.at[2].dir);
+                vels.of[0].esq, vels.of[0].dir,
+                vels.of[1].esq, vels.of[1].dir,
+                vels.of[2].esq, vels.of[2].dir);
     Serial.println();
 }
 
@@ -59,5 +67,12 @@ void setup() {
 }
 
 void loop() {
-    //! setar velocidades dos motores
+    static struct vel prev{0}, vel{0};
+
+    vel = vels.of[ID];
+    if (!memeql(&prev, &vel, sizeof(*vels.of))) {
+        move(vel.esq, vel.dir);
+        prev = vel;
+    }
+    //! delay?
 }

@@ -38,7 +38,7 @@ void loop() {
                 .len  = strlen(input),
             };
             strcpy(msg.vels, input);
-            Serial.println(input);
+            Serial.println(input); //! print
 
             esp_err_t err = esp_now_send(peer_addr, (uint8_t*) &msg, sizeof(msg));
             if (err == ESP_OK) Serial.println("Sent with success");
