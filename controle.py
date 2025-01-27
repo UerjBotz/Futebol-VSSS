@@ -23,7 +23,7 @@ L = _tam_eixo
 #ang_para_vel = lambda v, ang: (vl(v, ang), vr(v, ang))
 #raio_curva = lambda vl, vr: (R/2)*(vr+vl)/(vr-vl)
 
-def movedor(robo: int, espera: float = 0, vels: tuple[int, int] = (0,0)):
+def movedor(robo: int, espera: float=0, vels: tuple[int, int]=(0,0)):
   t_ini = time()
   while True:
     if (time() - t_ini) < espera:

@@ -29,6 +29,11 @@ def finalizar():
 
 if __name__ == '__main__':
     from sys import argv
+    args = argv[1:]
 
-    enviar(tuple(map(int, argv[1:])))
+    enviar(tuple(map(int, args)))
+    if args: exit()
+    try:
+        while True: enviar(tuple(map(int, input("> ").split())))
+    except KeyboardInterrupt: pass
 

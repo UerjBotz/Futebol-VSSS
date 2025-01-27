@@ -29,3 +29,4 @@ def parado():
   return (0,0)
 
 def bola_livre(): pass
+

@@ -12,7 +12,6 @@ def constrain(x, MIN, MAX):
 
 
 class pid:
-
   kp = 1.0
   ki = 0.0
   kd = 0.0
@@ -30,10 +29,7 @@ class pid:
     self.kd = kd
     t_last = time()
 
-  pass
-
   def update(self, speed, x_act, y_act, theta_act, x_set, y_set):
-
     t = time()
     self.t_last = time()
     dt = t - self.t_last
