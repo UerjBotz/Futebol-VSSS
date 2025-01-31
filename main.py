@@ -1,13 +1,15 @@
 from time  import sleep
 from astar import B, G, L, astar as planejar
-from visão import vision_conf, vision_info, vision as visão
+from visão import vision_conf, vision_info, bot_info, vision as visão
 from enum  import Enum
+from queue import Queue
+from threading import Thread
 
 import transmissor
 import controle
 import ajogada as aj
 
-import pygame
+import atexit
 import numpy as np
 import cv2   as cv
 
@@ -30,6 +32,8 @@ PX2CM = 0.1
 CONVERSÃO = 10 * PX2CM #! isso dá 1... ver depois se ainda usar...
 
 # Globais
+fila_teclado = Queue[str]()
+
 estado_atual: Estado = Estado.PARADO
 vs_conf: vision_conf = vision_conf(0,0,0,0, {
     'MIN':  {"darkblue": 0, "yellow": 0, "orange": 0,
@@ -60,23 +64,25 @@ GRADE_INICIAL = np.array([
     [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B]
 ])
 
+acessa_dicio = dict.get #!
 
-def acessa_dicio(dicio, chave, valor_padrão):
-    return dicio[chave] if chave in dicio else valor_padrão
+def complex_to_tuple(pos: complex) -> tuple:
+    return pos.real, pos.imag
   
 def id(robô):
     return acessa_dicio(robô, 'robotId', -1)
 
-def coordenadas(robô: dict):  #! usar info_campo/2 [...]?
-    return (robô['x'] + 850, -(robô['y'] - 650))
+def coords(robô: bot_info):  #! usar info_campo/2 [...]?
+    x, y = complex_to_tuple(robô.pos)
+    return (x + 850, -(y - 650)) #! ver se ainda tem que fazer isso
 
 def posição_matriz(coord):
     x, y = coord
     return int(x * FATOR_MATRIZ), int(y * FATOR_MATRIZ)
 
-# def inserir_na_matriz(matriz: np.ndarray, entidade: dict):
-#     x, y = coordenadas(entidade)
-#     matriz[int(x*FATOR_MATRIZ), int(y*FATOR_MATRIZ)] = 1
+def inserir_na_matriz(matriz: np.ndarray, entidade: dict):
+    x, y = coords(entidade)
+    matriz[int(x*FATOR_MATRIZ), int(y*FATOR_MATRIZ)] = 1
 
 def atualiza_matriz(entidades: list[dict]):
     nova = GRADE_INICIAL.copy()
@@ -85,16 +91,31 @@ def atualiza_matriz(entidades: list[dict]):
     return nova
 
 
+def ler_teclado(): # adaptado de https://stackoverflow.com/a/10079805
+    import termios, select, sys, tty
+
+    conf_term_antiga = termios.tcgetattr(sys.stdin)
+
+    @atexit.register
+    def resetar_terminal():
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, conf_term_antiga)
+
+    tty.setcbreak(sys.stdin.fileno())
+    while True:
+        if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
+            fila_teclado.put(sys.stdin.read(1))
+
+    #! windows
+
 def main(args: list[str]):
     global estado_atual
 
-    pygame.init() 
     movedores = [controle.movedor(i) for i in range(0,3)]
 
     vel_fixa = 60#%
     for m in movedores:
-        next(m)
-        controle.avançar_um_bloco(VEL_MAX//3, m)
+        m.send(None)
+        controle.avançar_um_bloco(VEL_MAX//3, m) #! teste
 
     ret, img = captura.read()
 
@@ -120,15 +141,16 @@ def main(args: list[str]):
   
     while True:
       try:
-        keys = pygame.key.get_pressed()
-        if   keys[pygame.KSCAN_SPACE]:
-            print(f"letra: espaço")
-            estado_atual = Estado.PARADO
-        elif keys[pygame.KSCAN_KP_ENTER]:
-            print(f"letra: enter")
-            estado_atual = Estado.NORMAL
-        else:
-            print(f"letra: {True in keys}")
+        if not fila_teclado.empty():
+            tecla = fila_teclado.get()
+            if   tecla == ' ':
+                estado_atual = Estado.PARADO
+                print(f"MODO PARADO")
+            elif tecla == '\n':
+                estado_atual = Estado.NORMAL
+                print(f"MODO NORMAL")
+            else:
+                print(f"letra: {tecla}")
     
         ret, frame = captura.read()
         if ret:
@@ -144,26 +166,24 @@ def main(args: list[str]):
         elif arg_time == 'b': time = azuis
         else: assert False
     
-        bola = visto.ball # acessa_dicio(posições, 'balls', {'x': 0, 'y': 0})
+        bola = visto.ball #! acessa_dicio(posições, 'balls', {'x': 0, 'y': 0})
         for _, robô in time.items():
-            print("time")
+            id_transmissor = ids.index(robô.id) #! id(robô)
             if   estado_atual == Estado.PARADO:
-                print("parado")
-                id_transmissor = ids.index(robô.id)
                 vels = aj.parado()
             elif estado_atual == Estado.NORMAL:
-                print("normal")
-                id_transmissor = ids.index(robô.id)
+                vels = (0,0)
                 if id_transmissor == 0:
-                    pos_alvo = aj.guardar_gol(coordenadas(robô), coordenadas(bola))
+                    pos_alvo = aj.guardar_gol(coords(robô), coords(bola))
                 elif id_transmissor == 1:
-                    pos_alvo = aj.defender(coordenadas(robô), coordenadas(bola))
-                else: # id_transmissor == 2:
-                    pos_alvo = aj.seguir_a_bola(coordenadas(robô), coordenadas(bola), entrar_area=True)
-                #! vels = pids[id_transmissor].update(vel_fixa, *coordenadas(robô), robô['orientation'], *pos_alvo)
+                    pos_alvo = aj.defender(coords(robô), coords(bola))
+                elif id_transmissor == 2:
+                    pos_alvo = aj.seguir_a_bola(coords(robô), coords(bola), entrar_area=True)
+                else: assert False
             else: assert False, "outros estados não implementados"
-
-            transmissor.mover(*vels, robo=id_transmissor)
+            
+            if controle.terminou_mov(movedores[id_transmissor]):
+                movedores[id_transmissor].send((0.1, vels))
             print(f"robô: {robô.pos}, aplicando vel {vels}")
 
         transmissor.enviar()
@@ -173,6 +193,8 @@ def main(args: list[str]):
     transmissor.finalizar()
 
 if __name__ == "__main__":
+    Thread(target=ler_teclado, daemon=True).start()
+
     from sys import argv
     main(argv[1:])
 

@@ -6,6 +6,9 @@ from typing import Callable
 
 import transmissor
 
+type pos = tuple[float, float]
+type posi = tuple[int, int]
+
 _tam_eixo = 68.3  #mm
 _diâmetro_roda = 34.5  #mm
 R = _diâmetro_roda / 2
@@ -16,29 +19,30 @@ L = _tam_eixo
 
 #vel_x = v*cos(angulo); vel_x = v*cos(angulo)
 #vel_angular = R*(vr - vl)/L
-
 # ->
+vl = lambda v, ang: ((2*v) + (ang*L)) / 2 * R
+vr = lambda v, ang: ((2*v) - (ang*L)) / 2 * R
 
-#vl = lambda v, ang: ((2*v) + (ang*L)) / 2 * R
-#vr = lambda v, ang: ((2*v) - (ang*L)) / 2 * R
+ang_para_vel = lambda v, ang: (vl(v, ang), vr(v, ang))
+raio_curva   = lambda vl, vr: (R/2)*(vr+vl)/(vr-vl)
 
-#ang_para_vel = lambda v, ang: (vl(v, ang), vr(v, ang))
-#raio_curva = lambda vl, vr: (R/2)*(vr+vl)/(vr-vl)
+def some(obj: object | None):
+    return obj is not None
 
 def movedor(robo: int, espera: float=0, vels: tuple[int, int]=(0,0)):
-    t_ini = time()
+    t_ini: float = time()
     while True:
-        if (time() - t_ini) < espera:
-            transmissor.mover(*vels, robo=robo)
-        else:
-            espera = 0
-            transmissor.mover(0, 0, robo=robo)
+        terminado: bool = (time() - t_ini) >= espera
+        if not terminado: transmissor.mover(*vels, robo=robo)
+        else:             transmissor.mover(0, 0,  robo=robo)
 
-        params = yield 
-        params = params if espera == 0 else None
-        if params is not None:
+        params = yield terminado
+        if terminado and some(params):
             t_ini = time()
             espera, vels = params
+
+def terminou_mov(mov):
+    return mov.send(None)
 
 _rpm  = 100 #(?)
 _circ = 2*pi*R #mm
@@ -52,8 +56,6 @@ def avançar_um_bloco(vel: int, mov, *, passo_tempo: float=1):
     mov.send((passo_tempo, (vel, vel)))
 
 #### luis? ####
-pos = tuple[float, float]
-
 def dist(pos0: pos, pos1: pos) -> float:
     x0, y0 = pos0; x1, y1 = pos1
     return ((x0-x1)**2 + (y0-y1)**2)**0.5

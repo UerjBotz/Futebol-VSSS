@@ -5,7 +5,7 @@ from cmath import polar
 from dataclasses import dataclass, field
 
 
-def complex_to_xy(cp: complex):
+def complex_to_xy(cp: complex): #! tirar isso daqui
     return np.array([cp.real, cp.imag], np.int32)
 
 def xy_to_complex(points: np.ndarray): #TODO: conferir tipo + add do retorno
