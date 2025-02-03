@@ -2,25 +2,12 @@
 
 Códigos do futebol de robôs VSSS (Very Small Size Soccer).
 
-## dependências
-- protobuf-compiler
-- vss-vision
-
-### python
-- pyserial
-- protobuf
-- pygame
-
-## como rodar
-
-compile o protobuf (só é necessário na primeira vez):
+## Instalando dependências
 ```
-cd pb
-./compile.sh
-cd ..
+pip install -r requirements.txt
 ```
 
-rode o programa:
+## Usando
 ```
 python3 main.py [y/b] # dependendo da cor do time
 ```
