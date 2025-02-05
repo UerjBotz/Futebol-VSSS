@@ -4,6 +4,8 @@ import atexit
 from queue import Queue
 
 ESC       = '\x1b'
+ENTER     = '\n'
+ESPAÇO    = ' '
 BACKSPACE = '\x7f'
 
 fila = Queue[str]()

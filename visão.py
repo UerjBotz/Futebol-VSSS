@@ -79,13 +79,16 @@ def match_contours(contours, shape="rect", tela=None): #TODO: tipos (principalme
             rect = cv.minAreaRect(cnt)
             box = np.intp(cv.boxPoints(rect))
             center = np.array(center, np.uint32)
-            # cv.circle(tela, center,l,(0,0,255),2)
-        else:
+            if tela is not None:
+                cv.circle(tela, center,int(radius),(0,0,255),2)
+        elif shape == "rect":
             rect = cv.minAreaRect(cnt)
             box = np.intp(cv.boxPoints(rect))
             center, vector, dimension = rect_coord(box)
             if tela is not None:
                 plot_arrow(tela, center, np.array(50 * vector, np.int32))
+        else: assert False
+
         vector_list += [vector]
         dimension_list += [dimension]
         center_list += [center]
@@ -173,8 +176,7 @@ def inrange(A: matriz, h_min, h_max, s_min, v_min):
     )
     return np.array(C, np.uint8)
 
-# TODO: kw_only
-@dataclass
+@dataclass #! kw_only
 class vision_conf():
     v_min:    int
     s_min:    int
@@ -189,7 +191,7 @@ class vision_conf():
             s_min    = vs_in["S min"],
             area_min = vs_in["area min"],
             delta    = vs_in["delta"],
-            colors = vs_colors,
+            colors   = vs_colors,
         )
 
 @dataclass(kw_only=True)
@@ -217,7 +219,7 @@ class vision_info():
     )
 
 
-def vision(img: np.ndarray, cfg: vision_conf, conv: int) -> tuple[vision_info, dict]:
+def vision(img: np.ndarray, cfg: vision_conf, conv: int, desenhar=False) -> tuple[vision_info, dict]:
     hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
 
     # -------------------------------------------------------------------
@@ -229,7 +231,7 @@ def vision(img: np.ndarray, cfg: vision_conf, conv: int) -> tuple[vision_info, d
     data_dimension = {}
     # UMA COR DE CADA VEZ -----------------------------------------------
 
-    tela = hsv.copy()
+    tela = img.copy() if desenhar else None
     color_img = np.zeros(img.shape, np.uint8)
 
     for i, color in enumerate(cfg.colors["MEAN"]):
@@ -262,11 +264,10 @@ def vision(img: np.ndarray, cfg: vision_conf, conv: int) -> tuple[vision_info, d
             shape = "rect"
             qtd_formas = 0
 
-
-        contornos, area = filtra_contornos(mask, 5*cfg.area_min, qtd_formas) #! 5* area_min???????
+        contornos, area = filtra_contornos(mask, 5*cfg.area_min, qtd_formas) #! '5*'area_min???????
         center, dimension, vector, box = match_contours(
-            contornos, shape=shape
-        )  # , tela=hsv_2 )
+            contornos, shape=shape, tela=tela
+        )
 
         data_center[color] = xy_to_complex(center)
         data_vector[color] = xy_to_complex(vector)
@@ -274,17 +275,17 @@ def vision(img: np.ndarray, cfg: vision_conf, conv: int) -> tuple[vision_info, d
         # ---------------------------------------------------------------
 
         # MARCAÇOES NA TELA ---------------------------------------------
-        # cv.drawContours( hsv, contornos, -1, (color_hue_mean[i],255,255), 0 )
-        if color == "orange":
-            if len(center) > 0:
+        if desenhar:
+            # cv.drawContours( hsv, contornos, -1, (color_hue_mean[i],255,255), 0 )
+            if color == "orange" and len(center) > 0:
                 cv.circle(tela, center[0], 5, (60, 255, 255), 2)
                 cv.circle(tela, center[0], dimension[0][0], (60, 255, 255), 2)
                 cv.circle(color_img, center[0], dimension[0][0], (60, 255, 255), 2)
-        else:
-            for p in center:
-                cv.circle(tela, p, 5, (cfg.colors["MEAN"][color], 255, 255), 2)
-            for b in box:
-                cv.drawContours(tela, [b], 0, (cfg.colors["MEAN"][color], 255, 255), 2)
+            else:
+                for p in center:
+                    cv.circle(tela, p, 5, (cfg.colors["MEAN"][color], 255, 255), 2)
+                for b in box:
+                    cv.drawContours(tela, [b], 0, (cfg.colors["MEAN"][color], 255, 255), 2)
 
     # -------------------------------------------------------------------
     # SEGMENTAÇÃO DOS DADOS DE COR --------------------------------------
@@ -355,10 +356,10 @@ def vision(img: np.ndarray, cfg: vision_conf, conv: int) -> tuple[vision_info, d
         # TODO: esse sort_bots^ provavelmente deveria ser sorted([bot for id, bot in game.teams[team_key].items()], key=lambda bot: bot["id"])
 
     # ATUALIZA OS MONITORES ---------------------------------------------
-    img_data = dict(vision=tela, colors=color_img)
-
-    # OUT['monitor_color'].update_hsv(color_img)
-    # OUT['monitor_mask' ].update_hsv(tela)
+    img_data = dict(vision=tela, colors=color_img) if desenhar else \
+               dict(vision=img,  colors=color_img)
+    # img_data['monitor_color'].update_hsv(color_img)
+    # img_data['monitor_mask' ].update_hsv(tela)
     # -------------------------------------------------------------------
     return (game, img_data)
 

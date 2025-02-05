@@ -32,21 +32,29 @@ N_ROBÔS = 3
 FATOR_MATRIZ = 1 / 100
 VEL_MAX = 100
 
-PX2CM = 0.1
+PX2CM     = .1
 CONVERSÃO = 10 * PX2CM #! isso dá 1... ver depois se ainda usar...
 
 # Globais
-fim:          Evento = Evento()
+fim         : Evento = Evento()
 estado_atual: Estado = Estado.PARADO
 
-vs_conf: vision_conf = vision_conf(0,0,0,0, {
-    'MIN':  {"darkblue": 0, "yellow": 0, "orange": 0,
-             "red": 0, "blue": 0, "green": 0, "pink": 0},
-    'MEAN': {"darkblue": 0, "yellow": 0, "orange": 0,
-             "red": 0, "blue": 0, "green": 0, "pink": 0},
-    'MAX':  {"darkblue": 0, "yellow": 0, "orange": 0,
-             "red": 0, "blue": 0, "green": 0, "pink": 0},
-}) #! checar código velho
+cores_min = {"orange":   3,
+             "yellow":   14,
+             "green":    38,
+             "blue":     72, # ciano
+             "darkblue": 99, # azul
+             "pink":    134,
+             "red":     180} #! não consegui ler
+cores     = list(cores_min.items())
+cores_max = {cor: h for cor, h in cores[1:]+cores[:1]}
+
+vs_conf: vision_conf = vision_conf(86,86,20, 0, {
+    'MIN':  cores_min,
+    'MEAN': {c: (cores_min[c] + cores_max[c])//2
+                           for c, _ in cores},
+    'MAX':  cores_max,
+})
 
 cam    = cv.VideoCapture(3)
 frames = Queue[np.ndarray]()
@@ -104,21 +112,22 @@ def camera(fim: Evento):
             frames.put(frame)
 
 
-def main(arg_time: str):
+def main(arg_time: str, desenhar: bool):
     vel_escalar = VEL_MAX*2/3
 
-    movedores = [controle.movedor(i) for i in range(0,3)]
+    movedores = [controle.movedor(i) for i in range(N_ROBÔS)]
     for m in movedores: m.send(None)
 
     frame = frames.get()
-    visto, _ = visão(frame, vs_conf, CONVERSÃO) #! descarte _
+    visto, tela = visão(frame, vs_conf, CONVERSÃO, desenhar)
     posições = visto.teams
 
-    amarelos = acessa_dicio(posições, 'team_yellow', {})
-    azuis    = acessa_dicio(posições, 'team_blue',   {})
-    if   arg_time == 'y': time = amarelos
-    elif arg_time == 'b': time = azuis
-    else:                 assert False
+    amarelos, azuis = {}, {}
+    if   arg_time == 'y':
+        time = acessa_dicio(posições, 'team_yellow', {})
+    elif arg_time == 'b':
+        time = acessa_dicio(posições, 'team_blue',   {})
+    else: assert False
 
     ids = sorted([id for id in time.keys()])
     try:
@@ -130,10 +139,10 @@ def main(arg_time: str):
       while not fim():
         if not teclado.fila.empty():
             tecla = teclado.fila.get()
-            if   tecla == ' ':
+            if   tecla == teclado.ESPAÇO:
                 estado_atual = Estado.PARADO
                 print(f"MODO: PARADO")
-            elif tecla == '\n':
+            elif tecla == teclado.ENTER:
                 estado_atual = Estado.NORMAL
                 print(f"MODO: NORMAL")
             elif tecla == teclado.ESC:
@@ -143,10 +152,8 @@ def main(arg_time: str):
     
         if not frames.empty():
             frame = frames.get()
-            cv.imshow("teste", frame)
-        cv.waitKey(1) # necessário!!!
 
-        visto, _ = visão(frame, vs_conf, CONVERSÃO) #! descarte _
+        visto, tela = visão(frame, vs_conf, CONVERSÃO, desenhar)
         posições = visto.teams
 
         amarelos = acessa_dicio(posições, 'team_yellow', amarelos)
@@ -166,13 +173,17 @@ def main(arg_time: str):
                 elif id_transmissor == 1:
                     pos_alvo = aj.defender(coords(robô), coords(bola))
                 elif id_transmissor == 2:
-                    pos_alvo = aj.seguir_a_bola(coords(robô), coords(bola), entrar_area=True)
+                    pos_alvo = aj.seguir_a_bola(coords(robô), coords(bola),
+                                                entrar_area=True)
                 else: assert False
             else: assert False, "outros estados não implementados"
             
             if controle.terminou_mov(movedores[id_transmissor]):
                 movedores[id_transmissor].send((0.1, vels))
-            print(f"robô: {robô.pos}, aplicando vel {vels}")
+            print(f"robô {id_transmissor} em {robô.pos} com vel aplicada {vels}")
+
+        cv.imshow("preview", tela["vision"])
+        cv.waitKey(1) # necessário!!!
 
         transmissor.enviar()
     except KeyboardInterrupt: pass
@@ -202,5 +213,5 @@ if __name__ == "__main__":
 
       Thread(target=teclado.ler_para_sempre, daemon=True).start()
       Thread(target=camera, args=[fim], daemon=True).start()
-      main(arg_time=time)
+      main(arg_time=time, desenhar=True)
 
