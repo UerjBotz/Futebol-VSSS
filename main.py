@@ -105,16 +105,12 @@ def camera(fim: Evento):
 
 
 def main(arg_time: str):
-    movedores = [controle.movedor(i) for i in range(0,3)]
+    vel_escalar = VEL_MAX*2/3
 
-    vel_fixa = 60#%
-    for m in movedores:
-        m.send(None)
-        controle.avançar_um_bloco(VEL_MAX//3, m) #! teste
+    movedores = [controle.movedor(i) for i in range(0,3)]
+    for m in movedores: m.send(None)
 
     frame = frames.get()
-    cv.imshow("teste", frame)
-    cv.waitKey(1) #!
     visto, _ = visão(frame, vs_conf, CONVERSÃO) #! descarte _
     posições = visto.teams
 
@@ -122,10 +118,14 @@ def main(arg_time: str):
     azuis    = acessa_dicio(posições, 'team_blue',   {})
     if   arg_time == 'y': time = amarelos
     elif arg_time == 'b': time = azuis
-    else: assert False
+    else:                 assert False
 
     ids = sorted([id for id in time.keys()])
     try:
+      for m in movedores: #! teste
+          controle.avançar_um_bloco(VEL_MAX//3, m) #! teste
+      transmissor.enviar() #! teste
+
       global estado_atual
       while not fim():
         if not teclado.fila.empty():
@@ -144,7 +144,7 @@ def main(arg_time: str):
         if not frames.empty():
             frame = frames.get()
             cv.imshow("teste", frame)
-        cv.waitKey(1) #!
+        cv.waitKey(1) # necessário!!!
 
         visto, _ = visão(frame, vs_conf, CONVERSÃO) #! descarte _
         posições = visto.teams
@@ -153,10 +153,8 @@ def main(arg_time: str):
         azuis    = acessa_dicio(posições, 'team_blue',   azuis)
         if   arg_time == 'y': time = amarelos
         elif arg_time == 'b': time = azuis
-        else: assert False
     
-        bola = visto.ball
-          #! = acessa_dicio(posições, 'balls', {'x': 0, 'y': 0})
+        bola = visto.ball #! fallback/valor_padrão?
         for _, robô in time.items():
             id_transmissor = ids.index(robô.id)
             if   estado_atual == Estado.PARADO:
@@ -177,11 +175,12 @@ def main(arg_time: str):
             print(f"robô: {robô.pos}, aplicando vel {vels}")
 
         transmissor.enviar()
-        cv.waitKey(1) #!
     except KeyboardInterrupt: pass
     finally:
-      cv.destroyAllWindows()
+      fim.set()
+
       cam.release()
+      cv.destroyAllWindows()
       transmissor.finalizar()
 
 if __name__ == "__main__":
