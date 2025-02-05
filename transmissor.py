@@ -1,11 +1,18 @@
 from serial import Serial
 from time   import sleep, time
 
-master = Serial("/dev/ttyUSB0", 115200)
-#! sleep(3) #! ver se precisa mesmo. muito esquisito...
-master.timeout = 3
+from serial.serialutil import SerialException
 
-envio = [0, 0, 0, 0, 0, 0]
+master: Serial
+envio : list[int] = [0, 0, 0, 0, 0, 0]
+
+def inicializar(porta: str="/dev/ttyUSB0", taxa: int=115200):
+    global master
+    try:
+      master = Serial(porta, taxa)
+      master.timeout = 3
+    except SerialException: return False
+    else:                   return True
 
 
 def converter(pacote: list[int]) -> str:
@@ -29,11 +36,14 @@ def finalizar():
 
 if __name__ == '__main__':
     from sys import argv
-    args = argv[1:]
+    _, *args = argv
 
+    inicializar()
     enviar(tuple(map(int, args)))
     if args: exit()
     try:
-        while True: enviar(tuple(map(int, input("> ").split())))
+      while True:
+          enviar(tuple(map(int, input("> ").split())))
     except KeyboardInterrupt: pass
+    finally: finalizar()
 

@@ -3,18 +3,22 @@ from astar import B, G, L, astar as planejar
 from visão import vision_conf, vision_info, bot_info, vision as visão
 from enum  import Enum
 from queue import Queue
-from threading import Thread
+
+from threading import Thread, Event
 
 import transmissor
 import controle
+import teclado
 import ajogada as aj
 
-import atexit
 import numpy as np
 import cv2   as cv
 
 
 # CONSTANTES E TIPOS
+class Evento(Event):
+    __call__ = Event.is_set
+
 Estado = Enum('Estado', ['PARADO',
                          'NORMAL',
                          'BOLA_LIVRE_FAVOR',
@@ -32,9 +36,9 @@ PX2CM = 0.1
 CONVERSÃO = 10 * PX2CM #! isso dá 1... ver depois se ainda usar...
 
 # Globais
-fila_teclado = Queue[str]()
-
+fim:          Evento = Evento()
 estado_atual: Estado = Estado.PARADO
+
 vs_conf: vision_conf = vision_conf(0,0,0,0, {
     'MIN':  {"darkblue": 0, "yellow": 0, "orange": 0,
              "red": 0, "blue": 0, "green": 0, "pink": 0},
@@ -44,8 +48,11 @@ vs_conf: vision_conf = vision_conf(0,0,0,0, {
              "red": 0, "blue": 0, "green": 0, "pink": 0},
 }) #! checar código velho
 
-captura = cv.VideoCapture(0)
-img = np.zeros((200,200, 3), np.uint8) #! dimensão
+cam    = cv.VideoCapture(3)
+frames = Queue[np.ndarray]()
+
+w = int(cam.get(cv.CAP_PROP_FRAME_WIDTH))
+h = int(cam.get(cv.CAP_PROP_FRAME_HEIGHT))
 
 #GRADE_INICIAL = np.zeros((13, 17))
 GRADE_INICIAL = np.array([
@@ -69,10 +76,7 @@ acessa_dicio = dict.get #!
 def complex_to_tuple(pos: complex) -> tuple:
     return pos.real, pos.imag
   
-def id(robô):
-    return acessa_dicio(robô, 'robotId', -1)
-
-def coords(robô: bot_info):  #! usar info_campo/2 [...]?
+def coords(robô: bot_info): #! usar info_campo/2 [...]?
     x, y = complex_to_tuple(robô.pos)
     return (x + 850, -(y - 650)) #! ver se ainda tem que fazer isso
 
@@ -80,36 +84,27 @@ def posição_matriz(coord):
     x, y = coord
     return int(x * FATOR_MATRIZ), int(y * FATOR_MATRIZ)
 
-def inserir_na_matriz(matriz: np.ndarray, entidade: dict):
+def inserir_na_matriz(matriz: np.ndarray, entidade: dict) -> None: #! tipos
     x, y = coords(entidade)
     matriz[int(x*FATOR_MATRIZ), int(y*FATOR_MATRIZ)] = 1
 
-def atualiza_matriz(entidades: list[dict]):
+def atualiza_matriz(entidades: list[dict]) -> np.ndarray:
     nova = GRADE_INICIAL.copy()
     for entidade in entidades:
         nova[posição_matriz(entidade)]
     return nova
 
 
-def ler_teclado(): # adaptado de https://stackoverflow.com/a/10079805
-    import termios, select, sys, tty
+def camera(fim: Evento):
+    while not fim():
+        ret, frame = cam.read()
+        if not ret:
+            print("Não foi possível receber o frame..."); fim.set()
+        elif frames.empty():
+            frames.put(frame)
 
-    conf_term_antiga = termios.tcgetattr(sys.stdin)
 
-    @atexit.register
-    def resetar_terminal():
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, conf_term_antiga)
-
-    tty.setcbreak(sys.stdin.fileno())
-    while True:
-        if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
-            fila_teclado.put(sys.stdin.read(1))
-
-    #! windows
-
-def main(args: list[str]):
-    global estado_atual
-
+def main(arg_time: str):
     movedores = [controle.movedor(i) for i in range(0,3)]
 
     vel_fixa = 60#%
@@ -117,47 +112,41 @@ def main(args: list[str]):
         m.send(None)
         controle.avançar_um_bloco(VEL_MAX//3, m) #! teste
 
-    ret, img = captura.read()
-
-    visto, _ = visão(img, vs_conf, CONVERSÃO) #! descarte _
+    frame = frames.get()
+    cv.imshow("teste", frame)
+    cv.waitKey(1) #!
+    visto, _ = visão(frame, vs_conf, CONVERSÃO) #! descarte _
     posições = visto.teams
 
     amarelos = acessa_dicio(posições, 'team_yellow', {})
     azuis    = acessa_dicio(posições, 'team_blue',   {})
-
-    try:
-        if   args[0] == 'y': time = amarelos
-        elif args[0] == 'b': time = azuis
-        else:
-            print(f"{args[0]} não é um time válido")
-            exit(1)
-    except IndexError:
-        print(f"por favor forneça o time")
-        exit(1)
-    else:
-        arg_time = args[0]
+    if   arg_time == 'y': time = amarelos
+    elif arg_time == 'b': time = azuis
+    else: assert False
 
     ids = sorted([id for id in time.keys()])
-  
-    while True:
-      try:
-        if not fila_teclado.empty():
-            tecla = fila_teclado.get()
+    try:
+      global estado_atual
+      while not fim():
+        if not teclado.fila.empty():
+            tecla = teclado.fila.get()
             if   tecla == ' ':
                 estado_atual = Estado.PARADO
-                print(f"MODO PARADO")
+                print(f"MODO: PARADO")
             elif tecla == '\n':
                 estado_atual = Estado.NORMAL
-                print(f"MODO NORMAL")
+                print(f"MODO: NORMAL")
+            elif tecla == teclado.ESC:
+                print("Saindo..."); raise KeyboardInterrupt
             else:
-                print(f"letra: {tecla}")
+                print(f"letra: {tecla.encode()}, {ord(tecla)}")
     
-        ret, frame = captura.read()
-        if ret:
-            img = frame
-        else: continue
-            
-        visto, _ = visão(img, vs_conf, CONVERSÃO) #! descarte _
+        if not frames.empty():
+            frame = frames.get()
+            cv.imshow("teste", frame)
+        cv.waitKey(1) #!
+
+        visto, _ = visão(frame, vs_conf, CONVERSÃO) #! descarte _
         posições = visto.teams
 
         amarelos = acessa_dicio(posições, 'team_yellow', amarelos)
@@ -166,14 +155,15 @@ def main(args: list[str]):
         elif arg_time == 'b': time = azuis
         else: assert False
     
-        bola = visto.ball #! acessa_dicio(posições, 'balls', {'x': 0, 'y': 0})
+        bola = visto.ball
+          #! = acessa_dicio(posições, 'balls', {'x': 0, 'y': 0})
         for _, robô in time.items():
-            id_transmissor = ids.index(robô.id) #! id(robô)
+            id_transmissor = ids.index(robô.id)
             if   estado_atual == Estado.PARADO:
                 vels = aj.parado()
             elif estado_atual == Estado.NORMAL:
                 vels = (0,0)
-                if id_transmissor == 0:
+                if   id_transmissor == 0:
                     pos_alvo = aj.guardar_gol(coords(robô), coords(bola))
                 elif id_transmissor == 1:
                     pos_alvo = aj.defender(coords(robô), coords(bola))
@@ -187,14 +177,31 @@ def main(args: list[str]):
             print(f"robô: {robô.pos}, aplicando vel {vels}")
 
         transmissor.enviar()
-        sleep(0.214) #! não
-
-      except KeyboardInterrupt: break
-    transmissor.finalizar()
+        cv.waitKey(1) #!
+    except KeyboardInterrupt: pass
+    finally:
+      cv.destroyAllWindows()
+      cam.release()
+      transmissor.finalizar()
 
 if __name__ == "__main__":
-    Thread(target=ler_teclado, daemon=True).start()
+    from sys import argv as args
+    try:
+      nome, *args = args
+      time, *args = args
+    except (IndexError, ValueError):
+      print(f"uso:\n"
+            f"    python3 {nome} <time>\n\n"
+            f"<time>: y|b\n", end='')
+    else:
+      if not (time in ('y', 'b')):
+          print(f"{time} não é um time válido"); exit(1)
+      if not (cam.isOpened()):
+          print("Não foi possível abrir a câmera"); exit(1)
+      if not (transmissor.inicializar()):
+          print("Não foi possível abrir a serial"); exit(1)
 
-    from sys import argv
-    main(argv[1:])
+      Thread(target=teclado.ler_para_sempre, daemon=True).start()
+      Thread(target=camera, args=[fim], daemon=True).start()
+      main(arg_time=time)
 
