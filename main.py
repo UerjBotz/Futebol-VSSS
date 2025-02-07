@@ -163,7 +163,9 @@ def main(arg_time: str, desenhar: bool):
     
         bola = visto.ball #! fallback/valor_padrão?
         for _, robô in time.items():
-            id_transmissor = ids.index(robô.id)
+            try: id_transmissor = ids.index(robô.id) #! esquisito
+            except ValueError: continue #! esquisito
+
             if   estado_atual == Estado.PARADO:
                 vels = aj.parado()
             elif estado_atual == Estado.NORMAL:
