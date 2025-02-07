@@ -2,20 +2,23 @@ from math  import pi, sin, cos
 from cmath import polar, phase
 from time  import time
 
-from typing import Callable, TypeIs
+from typing import Final, TypeIs, Iterator
 
 import transmissor
 
 
-## tipos
+## constantes e tipos
 type pos  = tuple[float, float]
 type posi = tuple[int, int]
 type vel  = tuple[int, int]
 
+VEL_MAX:    Final[int] = 100#!%(range superior pro envio)
+DIST_BLOCO: Final[int] = 100#mm #! usar o tamanho de célula da grade
+
 
 ## funções utilitárias
-def clamp(val, MIN, MAX):
-    return min(MAX, max(MIN, I))
+def clamp[Num](val: Num, MIN: Num, MAX: Num) -> Num:
+    return min(MAX, max(MIN, val))
 
 def dist(a: pos, b: pos) -> float:
     x0, y0 = a; x1, y1 = b
@@ -27,32 +30,29 @@ def some(obj: object | None) -> TypeIs[object]: #! talvez inclua. :. bool?
     return not none(obj)
 
 
-## tentativas de modelagem do robô
-_tam_eixo = 68.3  #mm
-_diâmetro_roda = 34.5  #mm
-R = _diâmetro_roda / 2
-L = _tam_eixo
+## modelagem do robô
+_eixo: Final = 68.3 #mm
+_diam: Final = 34.5 #mm
+_circ: Final = pi*_diam #mm
+_rpm : Final = 500 #rpm #! checar nos motores
 
-#vel_x = R*cos(angulo)*(vr+vl)/2; vel_y = R*sin(angulo)*(vr+vl)/2
-#vel_angular = angulo
+hz   = lambda rpm: rpm/60       # rpm -> rot/s | Hz
+rads = lambda rpm: 2*pi*hz(rpm) # rpm -> rad/s
 
-#vel_x = v*cos(angulo); vel_x = v*cos(angulo)
-#vel_angular = R*(vr - vl)/L
-# ->
-vl = lambda v, ang: ((2*v) + (ang*L)) / 2 * R
-vr = lambda v, ang: ((2*v) - (ang*L)) / 2 * R
+_freq: Final = hz(rpm) #Hz
+rot_para_dist = lambda freq, dt: freq*_circ*dt # rot/s -> s -> mm
+# -> dist = freq*_circ*dt
+# -> 1/dt = freq*_circ/dist
+# -> dt = dist/(freq*_circ) ->
+dist_para_tempo = lambda ds: ds/(_freq*_circ) # mm -> s #! usar vel (converter)
 
-ang_para_vel = lambda v, ang: (vl(v, ang), vr(v, ang))
-raio_curva   = lambda vl, vr: (R/2)*(vr+vl)/(vr-vl)
-
-_rpm  = 100 #(?)
-_circ = 2*pi*R #mm
-_freq = _rpm/60 #Hz
-vel_max = _circ*_freq #mm/s
+ang_para_tempo = lambda delta_ang: 1 #! fazer direito
+ang_para_vel = lambda delta_ang: (-_freq,  _freq) if delta_ang < 0 else \
+                                 ( _freq, -_freq) #! lidar com tempo
 
 
 ## "controle" atual
-def movedor(robo: int, espera: float=0, vels: tuple[int, int]=(0,0)):
+def movedor(robo: int, espera: float=0, vels: vel=(0,0)): #! tipos(gerador)
     t_ini: float = time()
     while True:
         terminado: bool = (time() - t_ini) >= espera
@@ -67,16 +67,21 @@ def movedor(robo: int, espera: float=0, vels: tuple[int, int]=(0,0)):
 def terminou_mov(mov):
     return mov.send(None)
 
-def girar(mov, vel: int, ang: float, passo_tempo: float=1):
-    mov.send((passo_tempo, ang_para_vel(vel, ang)))
+def girar(mov, vel: int, ang: float):
+    mov.send((ang_para_tempo(ang), ang_para_vel(vel, ang)))
 
-def avançar_um_bloco(mov, vel: int, *, passo_tempo: float=1):
-    mov.send((passo_tempo, (vel, vel)))
+def avançar_por(mov, vel: int, *, tempo: float=1):
+    mov.send((tempo, (vel, vel)))
+
+def avançar_dist(mov, vel: int, *, dist: float=1):
+    avançar_por(mov, vel, dist_para_tempo(dist)) #! usar vel (converter)
+
+def avançar_um_bloco(mov, vel: int):
+    avançar_dist(mov, vel, TAM_BLOCO)
 
 
 ## pid (não usado ainda, adaptado do controle_luis
 I_MAX   = 300
-VEL_MAX = 100
 def inicializar_pid(vel_padrão: int, *, kp: float, ki: float, kd: float,
                     VEL_MAX: int=VEL_MAX, I_MAX: float=I_MAX,
                     EPSILON: float=0.1): #! tipos (gerador)

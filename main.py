@@ -134,7 +134,7 @@ def main(arg_time: str, desenhar: bool):
     ids = sorted([id for id in time.keys()])
     try:
       for m in movedores: #! teste
-          controle.avançar_um_bloco(m, VEL_MAX//3) #! teste
+          controle.avançar_por(m, VEL_MAX//3, tempo=1) #! teste
       transmissor.enviar() #! teste
 
       global estado_atual
