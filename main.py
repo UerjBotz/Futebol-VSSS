@@ -15,7 +15,7 @@ import numpy as np
 import cv2   as cv
 
 
-# CONSTANTES E TIPOS
+## CONSTANTES e Tipos
 class Evento(Event):
     __call__ = Event.is_set
 
@@ -35,7 +35,8 @@ VEL_MAX = 100
 PX2CM     = .1
 CONVERSÃO = 10 * PX2CM #! isso dá 1... ver depois se ainda usar...
 
-# Globais
+
+## Globais
 fim         : Evento = Evento()
 estado_atual: Estado = Estado.PARADO
 
@@ -62,8 +63,9 @@ frames = Queue[np.ndarray]()
 w = int(cam.get(cv.CAP_PROP_FRAME_WIDTH))
 h = int(cam.get(cv.CAP_PROP_FRAME_HEIGHT))
 
-#GRADE_INICIAL = np.zeros((13, 17))
-GRADE_INICIAL = np.array([
+
+## Grade
+GRADE_INICIAL = np.array([ # 13 por 17
     [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
     [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
     [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
@@ -103,6 +105,7 @@ def atualiza_matriz(entidades: list[dict]) -> np.ndarray:
     return nova
 
 
+## Threads
 def camera(fim: Evento):
     while not fim():
         ret, frame = cam.read()
@@ -110,7 +113,6 @@ def camera(fim: Evento):
             print("Não foi possível receber o frame..."); fim.set()
         elif frames.empty():
             frames.put(frame)
-
 
 def main(arg_time: str, desenhar: bool):
     vel_escalar = VEL_MAX*2/3
@@ -196,6 +198,7 @@ def main(arg_time: str, desenhar: bool):
       cv.destroyAllWindows()
       transmissor.finalizar()
 
+## Ponto de entrada do programa
 if __name__ == "__main__":
     from sys import argv as args
     try:
