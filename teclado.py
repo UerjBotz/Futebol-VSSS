@@ -28,6 +28,11 @@ def ler_para_sempre(fila_teclado=fila): #! não deve funcionar no windows
 
     finally: resetar_terminal()
 
+def ler_linha_para_sempre(prompt="", fila_teclado=fila):
+    while True:
+        linha = input(prompt)
+        fila_teclado.put(linha)
+
 #!* esboço:
 # def gera_sempre:
 #     ...

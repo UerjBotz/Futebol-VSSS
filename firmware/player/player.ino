@@ -47,9 +47,9 @@ void on_recv(const uint8_t* mac, const uint8_t* data, int len) {
     //! print
     vels = str_to_vels(msg->vels, msg->len);
     Serial.printf("robôs %d %d, %d %d, %d %d\n",
-                vels.of[0].esq, vels.of[0].dir,
-                vels.of[1].esq, vels.of[1].dir,
-                vels.of[2].esq, vels.of[2].dir);
+                  vels.of[0].esq, vels.of[0].dir,
+                  vels.of[1].esq, vels.of[1].dir,
+                  vels.of[2].esq, vels.of[2].dir);
     Serial.println();
 }
 

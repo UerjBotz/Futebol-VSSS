@@ -30,20 +30,24 @@ def enviar(velocidades: list[int] = envio):
     master.write(converter(envio))
 
 def finalizar():
-    enviar([0,0,0,0,0,0])
-    master.close()
+    try:
+      enviar([0,0,0,0,0,0])
+      master.close()
+    except NameError: pass
 
 
 if __name__ == '__main__':
     from sys import argv
     _, *args = argv
 
-    inicializar()
-    enviar(tuple(map(int, args)))
-    if args: exit()
     try:
+      if inicializar():
+          enviar(tuple(map(int, args)))
+      if args: exit(0)
       while True:
           enviar(tuple(map(int, input("> ").split())))
     except KeyboardInterrupt: pass
+    except ValueError:
+      print("entrada inválida"); exit(1)
     finally: finalizar()
 

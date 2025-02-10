@@ -2,7 +2,8 @@ from math  import pi, sin, cos
 from cmath import polar, phase
 from time  import time
 
-from typing import Final, TypeIs, Iterator
+from typing import Final, Iterator
+from typing_extensions import TypeIs
 
 import transmissor
 
@@ -31,19 +32,19 @@ def some(obj: object | None) -> TypeIs[object]: #! talvez inclua. :. bool?
 
 
 ## modelagem do robô
-_eixo: Final = 68.3 #mm
-_diam: Final = 34.5 #mm
+_eixo: Final = 62.9 #mm
+_diam: Final = 33.7 #mm
 _circ: Final = pi*_diam #mm
-_rpm : Final = 500 #rpm #! checar nos motores
+_rpm : Final = 100 #rpm #! checar melhor
 
 hz   = lambda rpm: rpm/60       # rpm -> rot/s | Hz
 rads = lambda rpm: 2*pi*hz(rpm) # rpm -> rad/s
 
-_freq: Final = hz(rpm) #Hz
+_freq: Final = hz(_rpm) #Hz
 rot_para_dist = lambda freq, dt: freq*_circ*dt # rot/s -> s -> mm
 # -> dist = freq*_circ*dt
 # -> 1/dt = freq*_circ/dist
-# -> dt = dist/(freq*_circ) ->
+# ->   dt = dist/(freq*_circ) ->
 dist_para_tempo = lambda ds: ds/(_freq*_circ) # mm -> s #! usar vel (converter)
 
 ang_para_tempo = lambda delta_ang: 1 #! fazer direito
@@ -66,22 +67,25 @@ def movedor(robo: int, espera: float=0, vels: vel=(0,0)): #! tipos(gerador)
 
 def terminou_mov(mov):
     return mov.send(None)
+def espera_mov(mov):
+    while not terminou_mov(mov): pass
 
+def girar_por(mov, vel: int, tempo: float):
+    mov.send(tempo, ang_para_vel(vel, ang))
 def girar(mov, vel: int, ang: float):
     mov.send((ang_para_tempo(ang), ang_para_vel(vel, ang)))
 
 def avançar_por(mov, vel: int, *, tempo: float=1):
     mov.send((tempo, (vel, vel)))
-
-def avançar_dist(mov, vel: int, *, dist: float=1):
-    avançar_por(mov, vel, dist_para_tempo(dist)) #! usar vel (converter)
-
+def avançar_dist(mov, vel: int, *, dist: float):
+    avançar_por(mov, vel, tempo=dist_para_tempo(dist))
+    #!                                         ^ converter+usar vel
 def avançar_um_bloco(mov, vel: int):
     avançar_dist(mov, vel, TAM_BLOCO)
 
 
 ## pid (não usado ainda, adaptado do controle_luis
-I_MAX   = 300
+I_MAX = 300
 def inicializar_pid(vel_padrão: int, *, kp: float, ki: float, kd: float,
                     VEL_MAX: int=VEL_MAX, I_MAX: float=I_MAX,
                     EPSILON: float=0.1): #! tipos (gerador)
@@ -161,6 +165,49 @@ def simular(posição: pos, alvo: pos, orientação: float, *, EPSILON=0.1):
     plt.plot(xs, ys)
     plt.show()
 
-#if __name__ == "__main__":
-#    # [versão script]
+
+if __name__ == "__main__":
+    from argparse import ArgumentParser
+
+    cmd = parseador = ArgumentParser()
+    cmd.add_argument('id', type=int)
+
+    subparseadores = parseador.add_subparsers(dest='cmd')
+    cmd = comando_andar = subparseadores.add_parser('andar')
+    cmd.add_argument('vel',  type=int)
+    cmd.add_argument('dist', type=float)
+
+    cmd = comando_girar = subparseadores.add_parser('girar')
+    cmd.add_argument('vel', type=int)
+    cmd.add_argument('ang', type=float)
+
+    args = parseador.parse_args()
+    
+    try:
+      if not transmissor.inicializar():
+          print("não foi possível inicializar a serial"); exit(1)
+      movs = [movedor(i) for i in range(3)]
+      for mov in movs: mov.send(None)
+
+      if   args.cmd == 'andar':
+          avançar_dist(movs[args.id], args.vel, dist=args.dist)
+      elif args.cmd == 'girar':
+          girar(movs[args.id], args.vel, ang=args.ang)
+      transmissor.enviar()
+      espera_mov(movs[args.id])
+      transmissor.enviar()
+
+      if not args.id: exit(0)
+      while True:
+        args = parseador.parse_args(input("> ").split())
+        if   args.cmd == 'andar':
+            avançar_dist(movs[args.id], args.vel, dist=args.dist)
+        elif args.cmd == 'girar':
+            girar(movs[args.id], args.vel, ang=args.ang)
+        transmissor.enviar()
+        espera_mov(movs[args.id])
+        transmissor.enviar()
+    except KeyboardInterrupt: pass
+    finally:
+      transmissor.finalizar()
 
