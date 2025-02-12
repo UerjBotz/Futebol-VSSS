@@ -1,6 +1,6 @@
 #!.venv/bin/python3
 
-from math  import pi, sin, cos
+from math  import pi, tau, sin, cos
 from cmath import polar, phase
 from time  import time
 
@@ -11,7 +11,7 @@ import transmissor
 
 
 ## constantes e tipos
-type pos  = tuple[float, float]
+type posf = tuple[float, float]
 type posi = tuple[int, int]
 type vel  = tuple[int, int]
 
@@ -23,7 +23,7 @@ DIST_BLOCO: Final[int] = 100#mm #! usar o tamanho de célula da grade
 def clamp[Num](val: Num, MIN: Num, MAX: Num) -> Num:
     return min(MAX, max(MIN, val))
 
-def dist(a: pos, b: pos) -> float:
+def dist(a: posf, b: posf) -> float:
     x0, y0 = a; x1, y1 = b
     return ((x0-x1)**2 + (y0-y1)**2)**0.5
 
@@ -34,10 +34,10 @@ def some(obj: object | None) -> TypeIs[object]: #! talvez inclua. :. bool?
 
 
 ## modelagem do robô
-_eixo: Final = 62.9 #mm
-_diam: Final = 33.7 #mm
+_eixo: Final = 62.9     #mm
+_diam: Final = 33.7     #mm
 _circ: Final = pi*_diam #mm
-_rpm : Final = 100 #rpm #! checar melhor
+_rpm : Final = 200      #rpm #! checar valor melhor
 
 hz   = lambda rpm: rpm/60       # rpm -> rot/s | Hz
 rads = lambda rpm: 2*pi*hz(rpm) # rpm -> rad/s
@@ -47,11 +47,13 @@ rot_para_dist = lambda freq, dt: freq*_circ*dt # rot/s -> s -> mm
 # -> dist = freq*_circ*dt
 # -> 1/dt = freq*_circ/dist
 # ->   dt = dist/(freq*_circ) ->
-dist_para_tempo = lambda ds: ds/(_freq*_circ) # mm -> s #! usar vel (converter)
+dist_para_tempo = lambda freq, ds: abs(ds/(freq*_circ)) # rot/s -> mm -> s
 
-ang_para_tempo = lambda delta_ang: 1 #!
-ang_para_vel   = lambda delta_ang: (-_freq,  _freq) if delta_ang < 0 else \
-                                   ( _freq, -_freq) #! lidar com tempo
+ang_para_tempo = lambda freq, dang: dist_para_tempo(freq, _circ*dang/tau)
+               #^ rot/s -> rad -> s
+ang_para_vel   = lambda vel,  dang: (-vel, vel) if dang < 0 else \
+                                    ( vel,-vel)
+               #^ vel -> rad -> (vel, vel)
 
 
 ## "controle" atual
@@ -72,29 +74,32 @@ def terminou_mov(mov):
 def espera_mov(mov):
     while not terminou_mov(mov): pass
 
+def vel_para_freq(vel): return _freq*vel/VEL_MAX
+
 def girar_por(mov, vel: int, tempo: float):
     mov.send(tempo, ang_para_vel(vel, ang))
 def girar(mov, vel: int, ang: float):
-    mov.send((ang_para_tempo(ang), ang_para_vel(vel, ang)))
+    freq = vel_para_freq(vel)
+    mov.send((ang_para_tempo(freq, ang), ang_para_vel(vel, ang)))
 
-def avançar_por(mov, vel: int, *, tempo: float=1):
+def avançar_por(mov, vel: int, *, tempo: float):
     mov.send((tempo, (vel, vel)))
 def avançar_dist(mov, vel: int, *, dist: float):
-    avançar_por(mov, vel, tempo=dist_para_tempo(dist))
-    #!                                         ^ converter+usar vel
+    freq = vel_para_freq(vel)
+    avançar_por(mov, vel, tempo=dist_para_tempo(freq, dist))
 def avançar_um_bloco(mov, vel: int):
     avançar_dist(mov, vel, TAM_BLOCO)
 
 
 ## pid (não usado ainda, adaptado do controle_luis
 I_MAX = 300
-def inicializar_pid(vel_padrão: int, *, kp: float, ki: float, kd: float,
+def inicializar_pid(vel_fixa: int, *, kp: float, ki: float, kd: float,
                     VEL_MAX: int=VEL_MAX, I_MAX: float=I_MAX,
                     EPSILON: float=0.1): #! tipos (gerador)
     I = err_ang_ant = 0
     t_ant = time()
 
-    def pid(atual: pos, alvo: pos, orientação: float, v=vel_padrão) -> vel:
+    def pid(atual: posf, alvo: posf, orientação: float, v=vel_fixa) -> vel:
         nonlocal I, t_ant, err_ang_ant
         x0, y0 = atual; x1, y1 = alvo
 
@@ -132,9 +137,9 @@ def inicializar_pid(vel_padrão: int, *, kp: float, ki: float, kd: float,
     return corrotina()
 
 #https://www.cs.columbia.edu/~allen/F19/NOTES/icckinematics.pdf pg 4
-def diferencial(original: pos, orientação: float,
+def diferencial(original: posf, orientação: float,
                 vels: tuple[float,float], duração: float,
-                *, N_ITER = 1000) -> tuple[pos, float]:
+                *, N_ITER = 1000) -> tuple[posf, float]:
     theta = orientação
     x, y  = original
 
@@ -150,7 +155,7 @@ def diferencial(original: pos, orientação: float,
 
 
 ## para testes de pid (falta parear com o do luis)
-def simular(posição: pos, alvo: pos, orientação: float, *, EPSILON=0.1):
+def simular(posição: posf, alvo: posf, orientação: float, *, EPSILON=0.1):
     import matplotlib.pyplot as plt
     tempo = 0.02
     xs = []; ys = []
@@ -183,7 +188,7 @@ if __name__ == "__main__":
     cmd.add_argument('vel', type=int)
     cmd.add_argument('ang', type=float)
 
-    args = parseador.parse_args()
+    args = parseador.parse_args() #; print(args)
     
     try:
       if not transmissor.inicializar():
@@ -195,20 +200,22 @@ if __name__ == "__main__":
           avançar_dist(movs[args.id], args.vel, dist=args.dist)
       elif args.cmd == 'girar':
           girar(movs[args.id], args.vel, ang=args.ang)
+      print(transmissor.envio)
       transmissor.enviar()
       espera_mov(movs[args.id])
       transmissor.enviar()
 
       if not args.id: exit(0)
       while True:
-        args = parseador.parse_args(input("> ").split())
-        if   args.cmd == 'andar':
-            avançar_dist(movs[args.id], args.vel, dist=args.dist)
-        elif args.cmd == 'girar':
-            girar(movs[args.id], args.vel, ang=args.ang)
-        transmissor.enviar()
-        espera_mov(movs[args.id])
-        transmissor.enviar()
+          args = parseador.parse_args(input("> ").split())
+          if   args.cmd == 'andar':
+              avançar_dist(movs[args.id], args.vel, dist=args.dist)
+          elif args.cmd == 'girar':
+              girar(movs[args.id], args.vel, ang=args.ang)
+          print(transmissor.envio)
+          transmissor.enviar()
+          espera_mov(movs[args.id])
+          transmissor.enviar()
     except KeyboardInterrupt: pass
     finally:
       transmissor.finalizar()
