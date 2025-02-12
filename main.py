@@ -5,6 +5,7 @@ from astar import B, G, L, astar as planejar
 from visão import vision_conf, vision_info, bot_info, vision as visão
 from enum  import Enum
 from queue import Queue
+from comum import *
 
 from threading import Thread, Event
 
@@ -18,9 +19,6 @@ import cv2   as cv
 
 
 ## CONSTANTES e Tipos
-class Evento(Event):
-    __call__ = Event.is_set
-
 Estado = Enum('Estado', ['PARADO',
                          'NORMAL',
                          'BOLA_LIVRE_FAVOR',
@@ -29,11 +27,6 @@ Estado = Enum('Estado', ['PARADO',
                          'TIRO_LIVRE_CONTRA',
                          'PÊNALTI_FAVOR',
                          'PÊNALTI_CONTRA'])
-
-N_ROBÔS = 3
-FATOR_MATRIZ = 1 / 100
-VEL_MAX = 100
-
 PX2CM     = .1
 CONVERSÃO = 10 * PX2CM #! isso dá 1... ver depois se ainda usar...
 
@@ -55,11 +48,11 @@ cores_max = {cor: h for cor, h in cores[1:]+cores[:1]}
 vs_conf: vision_conf = vision_conf(86,86,20, 0, {
     'MIN':  cores_min,
     'MEAN': {c: (cores_min[c] + cores_max[c])//2
-                           for c, _ in cores},
+                              for c, _ in cores},
     'MAX':  cores_max,
 })
 
-cam    = cv.VideoCapture(3)
+cam    = cv.VideoCapture(2)
 frames = Queue[np.ndarray]()
 
 w = int(cam.get(cv.CAP_PROP_FRAME_WIDTH))
@@ -67,7 +60,7 @@ h = int(cam.get(cv.CAP_PROP_FRAME_HEIGHT))
 
 
 ## Grade
-GRADE_INICIAL = np.array([ # 13 por 17
+GRADE_INICIAL = np.array([ # 13lin x 17col
     [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
     [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
     [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
@@ -82,11 +75,6 @@ GRADE_INICIAL = np.array([ # 13 por 17
     [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B],
     [B, L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, B]
 ])
-
-acessa_dicio = dict.get #!
-
-def complex_to_tuple(pos: complex) -> tuple:
-    return pos.real, pos.imag
   
 def coords(robô: bot_info): #! usar info_campo/2 [...]?
     x, y = complex_to_tuple(robô.pos)
@@ -128,9 +116,9 @@ def main(arg_time: str, desenhar: bool):
 
     amarelos, azuis = {}, {}
     if   arg_time == 'y':
-        time = acessa_dicio(posições, 'team_yellow', {})
+        time = posições.get('team_yellow', {})
     elif arg_time == 'b':
-        time = acessa_dicio(posições, 'team_blue',   {})
+        time = posições.get('team_blue',   {})
     else: assert False
 
     ids = sorted([id for id in time.keys()])
@@ -160,8 +148,8 @@ def main(arg_time: str, desenhar: bool):
         visto, tela = visão(frame, vs_conf, CONVERSÃO, desenhar)
         posições = visto.teams
 
-        amarelos = acessa_dicio(posições, 'team_yellow', amarelos)
-        azuis    = acessa_dicio(posições, 'team_blue',   azuis)
+        amarelos = posições.get('team_yellow', amarelos)
+        azuis    = posições.get('team_blue',   azuis)
         if   arg_time == 'y': time = amarelos
         elif arg_time == 'b': time = azuis
     

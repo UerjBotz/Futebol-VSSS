@@ -4,7 +4,7 @@ from math  import pi, tau, sin, cos
 from cmath import phase
 from time  import time
 
-from typing import Final, Iterator
+from typing import Final, Generator
 from comum  import *
 
 import transmissor
@@ -14,9 +14,6 @@ import transmissor
 type posf = tuple[float, float]
 type posi = tuple[int, int]
 type vel  = tuple[int, int]
-
-VEL_MAX:    Final[int] = 100#!%(range superior pro envio)
-DIST_BLOCO: Final[int] = 100#mm #! usar o tamanho de célula da grade
 
 
 ## modelagem do robô
@@ -43,7 +40,7 @@ ang_para_vel   = lambda vel,  dang: (-vel, vel) if dang < 0 else \
 
 
 ## "controle" atual
-def movedor(robô: Final[int]) -> Iterator: #! tipo melhor
+def movedor(robô: Final[int]) -> Generator: #! tipo melhor
     t_ini:  float = time()
     espera: float = 0
     vels:   vel   = (0, 0)

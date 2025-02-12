@@ -4,14 +4,7 @@ import numpy as np
 from cmath import polar
 from dataclasses import dataclass, field
 
-
-def complex_to_xy(cp: complex): #! tirar isso daqui
-    return np.array([cp.real, cp.imag], np.int32)
-
-def xy_to_complex(points: np.ndarray): #TODO: conferir tipo + add do retorno
-    if len(points) <= 0: return np.array([])
-    return points @ np.array([[1], [1j]])[:, 0]
-
+from comum import *
 
 def plot_arrow(img, center, v, hue=0):
     cv.arrowedLine(
