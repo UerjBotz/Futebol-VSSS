@@ -21,9 +21,9 @@ def converter(pacote: list[int]) -> str:
     msg = ' '.join(map(str,pacote)) + '\n'
     return msg.encode()
 
-def mover(motor_esq: int, motor_dir: int, *, robo: int, agora=False):
-    envio[robo*2] = motor_esq
-    envio[robo*2 + 1] = motor_dir
+def mover(motor_esq: int, motor_dir: int, *, robô: int, agora=False):
+    envio[robô*2]     = motor_esq
+    envio[robô*2 + 1] = motor_dir
     
     if agora: enviar()
 

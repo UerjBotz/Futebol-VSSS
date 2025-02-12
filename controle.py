@@ -1,11 +1,11 @@
 #!.venv/bin/python3
 
 from math  import pi, tau, sin, cos
-from cmath import polar, phase
+from cmath import phase
 from time  import time
 
 from typing import Final, Iterator
-from typing_extensions import TypeIs
+from comum  import *
 
 import transmissor
 
@@ -17,20 +17,6 @@ type vel  = tuple[int, int]
 
 VEL_MAX:    Final[int] = 100#!%(range superior pro envio)
 DIST_BLOCO: Final[int] = 100#mm #! usar o tamanho de célula da grade
-
-
-## funções utilitárias
-def clamp[Num](val: Num, MIN: Num, MAX: Num) -> Num:
-    return min(MAX, max(MIN, val))
-
-def dist(a: posf, b: posf) -> float:
-    x0, y0 = a; x1, y1 = b
-    return ((x0-x1)**2 + (y0-y1)**2)**0.5
-
-def none(obj: object | None) -> TypeIs[None]:
-    return obj is None
-def some(obj: object | None) -> TypeIs[object]: #! talvez inclua. :. bool?
-    return not none(obj)
 
 
 ## modelagem do robô
@@ -57,12 +43,14 @@ ang_para_vel   = lambda vel,  dang: (-vel, vel) if dang < 0 else \
 
 
 ## "controle" atual
-def movedor(robo: int, espera: float=0, vels: vel=(0,0)): #! tipos(gerador)
-    t_ini: float = time()
+def movedor(robô: Final[int]) -> Iterator: #! tipo melhor
+    t_ini:  float = time()
+    espera: float = 0
+    vels:   vel   = (0, 0)
     while True:
         terminado: bool = (time() - t_ini) >= espera
-        if not terminado: transmissor.mover(*vels, robo=robo)
-        else:             transmissor.mover(0, 0,  robo=robo)
+        if not terminado: transmissor.mover(*vels, robô=robô)
+        else:             transmissor.mover(0, 0,  robô=robô)
 
         params = yield terminado
         if terminado and some(params):
@@ -136,7 +124,7 @@ def inicializar_pid(vel_fixa: int, *, kp: float, ki: float, kd: float,
 
     return corrotina()
 
-#https://www.cs.columbia.edu/~allen/F19/NOTES/icckinematics.pdf pg 4
+## para testes de pid (antigo)
 def diferencial(original: posf, orientação: float,
                 vels: tuple[float,float], duração: float,
                 *, N_ITER = 1000) -> tuple[posf, float]:
@@ -152,24 +140,51 @@ def diferencial(original: posf, orientação: float,
         x += v*cos(theta)*dt
         y += v*sin(theta)*dt
     return (x, y), theta
+#^ https://www.cs.columbia.edu/~allen/F19/NOTES/icckinematics.pdf pg 4
 
-
-## para testes de pid (falta parear com o do luis)
-def simular(posição: posf, alvo: posf, orientação: float, *, EPSILON=0.1):
+def simular_diferencial(inicial: posf, alvo: posf, orientação: float):
     import matplotlib.pyplot as plt
-    tempo = 0.02
-    xs = []; ys = []
+    dt = 0.02
 
-    pid = inicializar_pid(800, kp=0.1, ki=0.2, kd=0.5)
+    x,  y  = inicial
+    xs, ys = [x], [y]
+
+    pid = inicializar_pid(VEL_MAX//2, kp=0.1, ki=0.2, kd=0.5)
     for i in range(100):
-        x, y = posição
+        vels = pid((x, y), alvo, orientação)
+        (x, y), orientação = diferencial(posição, orientação, vels, dt)
+
         xs.append(x)
         ys.append(y)
-        vels = pid(posição, alvo, orientação)
-        posição, orientação = diferencial(posição, orientação, vels, tempo)
+
         if (vels == (0,0)): break
 
     plt.plot(xs, ys)
+    plt.show()
+
+## para testes de pid (adaptado do luis)
+def simular(alvo: posf, tempo=2.0, N=1000, E=1):
+    import matplotlib.pyplot as plt
+    
+    dt = tempo / N
+
+    xs, ys = [0.0], [0.0]
+    thetas = [0.0]
+
+    speed = VEL_MAX//2
+    l = 10 #! ?
+
+    bot = inicializar_pid(vel, 500.0, 0, 0)
+    for i in range(N):
+        vl, vr = bot.send(((xs[i],ys[i]), alvo, thetas[i]))
+        w = (vr - vl) / l
+        thetas += [thetas[i] + w * dt]
+        xs     += [xs[i] + speed * cos(thetas[i + 1]) * dt]
+        ys     += [ys[i] + speed * sin(thetas[i + 1]) * dt]
+
+        if (abs(complex(x_set - xs[i + 1], y_set - ys[i + 1])) < E): break
+
+    plt.plot(x, y)
     plt.show()
 
 
@@ -183,12 +198,28 @@ if __name__ == "__main__":
     cmd = comando_andar = subparseadores.add_parser('andar')
     cmd.add_argument('vel',  type=int)
     cmd.add_argument('dist', type=float)
+    cmd.add_argument('--verbose', '-v', action='count', default=0)
 
     cmd = comando_girar = subparseadores.add_parser('girar')
     cmd.add_argument('vel', type=int)
     cmd.add_argument('ang', type=float)
+    cmd.add_argument('--verbose', '-v', action='count', default=0)
 
     args = parseador.parse_args() #; print(args)
+
+    def interpretar_comando(args):
+        if args.verbose >= 3: print(args)
+
+        if   args.cmd == 'andar':
+            avançar_dist(movs[args.id], args.vel, dist=args.dist)
+        elif args.cmd == 'girar':
+            girar(movs[args.id], args.vel, ang=args.ang)
+        if args.verbose >= 1: print(transmissor.envio)
+
+        transmissor.enviar()
+        espera_mov(movs[args.id])
+        transmissor.enviar()
+        if args.verbose >= 2: print(transmissor.envio)
     
     try:
       if not transmissor.inicializar():
@@ -196,26 +227,12 @@ if __name__ == "__main__":
       movs = [movedor(i) for i in range(3)]
       for mov in movs: mov.send(None)
 
-      if   args.cmd == 'andar':
-          avançar_dist(movs[args.id], args.vel, dist=args.dist)
-      elif args.cmd == 'girar':
-          girar(movs[args.id], args.vel, ang=args.ang)
-      print(transmissor.envio)
-      transmissor.enviar()
-      espera_mov(movs[args.id])
-      transmissor.enviar()
+      interpretar_comando(args)
 
       if not args.id: exit(0)
       while True:
           args = parseador.parse_args(input("> ").split())
-          if   args.cmd == 'andar':
-              avançar_dist(movs[args.id], args.vel, dist=args.dist)
-          elif args.cmd == 'girar':
-              girar(movs[args.id], args.vel, ang=args.ang)
-          print(transmissor.envio)
-          transmissor.enviar()
-          espera_mov(movs[args.id])
-          transmissor.enviar()
+          interpretar_comando(args)
     except KeyboardInterrupt: pass
     finally:
       transmissor.finalizar()
