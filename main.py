@@ -45,7 +45,7 @@ cores_min = {"orange":   3,
 cores     = list(cores_min.items())
 cores_max = {cor: h for cor, h in cores[1:]+cores[:1]}
 
-vs_conf: vision_conf = vision_conf(86,86,20, 0, {
+vs_conf: vision_conf = vision_conf(86,86,20, 0, { #! checar delta
     'MIN':  cores_min,
     'MEAN': {c: (cores_min[c] + cores_max[c])//2
                               for c, _ in cores},
@@ -105,7 +105,7 @@ def camera(fim: Evento):
             frames.put(frame)
 
 def main(arg_time: str, desenhar: bool):
-    vel_escalar = VEL_MAX*2/3
+    vel_escalar = VEL_MAX//2
 
     movedores = [controle.movedor(i) for i in range(N_ROBÔS)]
     for m in movedores: m.send(None)
