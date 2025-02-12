@@ -1,3 +1,5 @@
+#!.venv/bin/python3
+
 from math  import pi, sin, cos
 from cmath import polar, phase
 from time  import time
@@ -47,9 +49,9 @@ rot_para_dist = lambda freq, dt: freq*_circ*dt # rot/s -> s -> mm
 # ->   dt = dist/(freq*_circ) ->
 dist_para_tempo = lambda ds: ds/(_freq*_circ) # mm -> s #! usar vel (converter)
 
-ang_para_tempo = lambda delta_ang: 1 #! fazer direito
-ang_para_vel = lambda delta_ang: (-_freq,  _freq) if delta_ang < 0 else \
-                                 ( _freq, -_freq) #! lidar com tempo
+ang_para_tempo = lambda delta_ang: 1 #!
+ang_para_vel   = lambda delta_ang: (-_freq,  _freq) if delta_ang < 0 else \
+                                   ( _freq, -_freq) #! lidar com tempo
 
 
 ## "controle" atual

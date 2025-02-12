@@ -1,3 +1,5 @@
+#!.venv/bin/python3
+
 from time  import sleep
 from astar import B, G, L, astar as planejar
 from visão import vision_conf, vision_info, bot_info, vision as visão

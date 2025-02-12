@@ -1,3 +1,5 @@
+#!.venv/bin/python3
+
 from serial import Serial
 from time   import sleep, time
 
@@ -43,9 +45,11 @@ if __name__ == '__main__':
     try:
       if inicializar():
           enviar(tuple(map(int, args)))
-      if args: exit(0)
-      while True:
-          enviar(tuple(map(int, input("> ").split())))
+          if args: exit(0)
+          while True:
+              enviar(tuple(map(int, input("> ").split())))
+      else:
+          print("erro ao inicializar serial"); exit(1)
     except KeyboardInterrupt: pass
     except ValueError:
       print("entrada inválida"); exit(1)
